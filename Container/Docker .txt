@@ -1,0 +1,8 @@
+    docker build . --tag CONTAINER
+    docker run -it CONTAINER
+    docker image ls
+    docker pull CONTAINER
+        Your container should start in interactive mode, and you should see a Linux prompt.
+        Type 'exit' to leave Linux / stop your container.
+    docker container prune
+        This removes stopped containers -- it's an important step to remember.
