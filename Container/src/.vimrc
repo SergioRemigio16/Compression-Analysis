@@ -38,6 +38,7 @@ set smartindent              " smart indentation
 set tabstop=4                " a tab is four spaces
 set shiftwidth=4             " number of spaces to use for autoindenting
 set expandtab                " use spaces instead of tabs
+set cursorline
 
 " NERDTree configurations
 map <C-n> :NERDTreeToggle<CR>

@@ -11,7 +11,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_PREFIX_PATH "/app/zfp/build")
 find_package(ZFP REQUIRED)
 
-add_executable(my_project_executable main.cpp)
+add_executable(my_project_executable
+    main.cpp
+    Utilities.cpp
+    )
 
 # Include ZFP headers and link ZFP library to your executable.
 target_include_directories(my_project_executable PRIVATE ${ZFP_INCLUDE_DIRS})
