@@ -55,13 +55,18 @@ RUN cd ~/.vim/bundle/coc.nvim && yarn install && yarn build
 WORKDIR /app/my_project
 
 # Copy the CMakeLists.txt and main.cpp files from the local machine to the Docker image
-COPY src/CMakeLists.txt src/main.cpp ./
+COPY src/CMakeLists.txt src/main.cpp src/Utilities.cpp src/Utilities.h ./
 
 # Build the project
 RUN mkdir build && \
     cd build && \
     cmake .. && \
     make
+
+# Copy the build_script.sh file from the local machine to the Docker image and make it executable
+COPY src/build_script.sh ./
+RUN chmod +x build_script.sh
+RUN dos2unix build_script.sh
 
 # Set the entry point to the interactive shell
 ENTRYPOINT ["/bin/bash"]
