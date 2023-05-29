@@ -10,6 +10,44 @@
 #define RUNS 10000
 #define WARMUP_RUNS 100
 
+zfp_field* compressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, std::vector<double>& data) {
+    void* buffer = malloc(bufsize);
+    bitstream* stream = stream_open(buffer, bufsize);
+    zfp_stream_set_bit_stream(zfp, stream);
+    zfp_stream_rewind(zfp);
+    zfp_compress(zfp, field);
+    zfp_stream_rewind(zfp);
+
+    // link the decompressed field with the data vector
+    zfp_field* dec_field = zfp_field_3d(data.data(), zfp_type_double, field->nx, field->ny, field->nz);
+
+    stream_close(stream);
+    //zfp_field_free(dec_field); // free the decompressed field
+    free(buffer);
+
+    return dec_field;
+}
+
+zfp_field* decompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, zfp_field* dec_field) {
+    void* buffer = malloc(bufsize);
+    bitstream* stream = stream_open(buffer, bufsize);
+    zfp_stream_set_bit_stream(zfp, stream);
+    zfp_stream_rewind(zfp);
+    zfp_compress(zfp, field);
+    zfp_stream_rewind(zfp);
+
+    // link the decompressed field with the data vector
+    zfp_decompress(zfp, dec_field);
+
+    stream_close(stream);
+    zfp_field_free(dec_field); // free the decompressed field
+    free(buffer);
+
+    return dec_field;
+}
+
+
+
 // Compress and decompress matrix using ZFP library
 void compressAndDecompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, std::vector<double>& data) {
     void* buffer = malloc(bufsize);
@@ -91,9 +129,15 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
         size_t bufsize = zfp_stream_maximum_size(zfp, field);
 
         auto start = std::chrono::high_resolution_clock::now();
-        compressAndDecompressMatrix(zfp, field, bufsize, decompressedData);
+        zfp_field* compressedData = compressMatrix(zfp, field, bufsize, decompressedData);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> compressTime = end - start;
+
+	    start = std::chrono::high_resolution_clock::now();
+        decompressMatrix(zfp, field, bufsize, compressedData);
+        end = std::chrono::high_resolution_clock::now();
+        compressTime += end - start;
+
 
         if (i >= WARMUP_RUNS) {
             compressTimes[i - WARMUP_RUNS] = compressTime.count() - timingOverhead;
