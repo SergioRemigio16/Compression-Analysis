@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <chrono>
 #include <zfp.h>
@@ -6,66 +5,10 @@
 #include <numeric>
 #include <cmath>
 #include "Utilities.h"
+#include "CompressionDecompression.h"
 
 #define RUNS 10000
 #define WARMUP_RUNS 100
-
-zfp_field* compressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, std::vector<double>& data) {
-    void* buffer = malloc(bufsize);
-    bitstream* stream = stream_open(buffer, bufsize);
-    zfp_stream_set_bit_stream(zfp, stream);
-    zfp_stream_rewind(zfp);
-    zfp_compress(zfp, field);
-    zfp_stream_rewind(zfp);
-
-    // link the decompressed field with the data vector
-    zfp_field* dec_field = zfp_field_3d(data.data(), zfp_type_double, field->nx, field->ny, field->nz);
-
-    stream_close(stream);
-    //zfp_field_free(dec_field); // free the decompressed field
-    free(buffer);
-
-    return dec_field;
-}
-
-zfp_field* decompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, zfp_field* dec_field) {
-    void* buffer = malloc(bufsize);
-    bitstream* stream = stream_open(buffer, bufsize);
-    zfp_stream_set_bit_stream(zfp, stream);
-    zfp_stream_rewind(zfp);
-    zfp_compress(zfp, field);
-    zfp_stream_rewind(zfp);
-
-    // link the decompressed field with the data vector
-    zfp_decompress(zfp, dec_field);
-
-    stream_close(stream);
-    zfp_field_free(dec_field); // free the decompressed field
-    free(buffer);
-
-    return dec_field;
-}
-
-
-
-// Compress and decompress matrix using ZFP library
-void compressAndDecompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, std::vector<double>& data) {
-    void* buffer = malloc(bufsize);
-    bitstream* stream = stream_open(buffer, bufsize);
-    zfp_stream_set_bit_stream(zfp, stream);
-    zfp_stream_rewind(zfp);
-    zfp_compress(zfp, field);
-    zfp_stream_rewind(zfp);
-
-    // link the decompressed field with the data vector
-    zfp_field* dec_field = zfp_field_3d(data.data(), zfp_type_double, field->nx, field->ny, field->nz);
-    zfp_decompress(zfp, dec_field);
-
-    zfp_field_free(dec_field); // free the decompressed field
-    stream_close(stream);
-    free(buffer);
-}
-
 
 
 // Calculate Mean Squared Error (MSE) between original and decompressed data
@@ -78,33 +21,15 @@ double calculateMSE(const std::vector<double>& originalData, const std::vector<d
     return sum / originalData.size();
 }
 
-// Measure the overhead of timing process
-double measureTimingOverhead() {
-    auto start = std::chrono::high_resolution_clock::now();
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> overhead = end - start;
-    return overhead.count();
-}
 
-void printMatrix(const std::vector<double>& matrix, int x, int y, int z) {
-    for (int i = 0; i < z; i++) {
-        std::cout << "z = " << i << ":\n";
-        for (int j = 0; j < y; j++) {
-            for (int k = 0; k < x; k++) {
-                std::cout << matrix[i * x * y + j * x + k] << " ";
-            }
-            std::cout << "\n";
-        }
-        std::cout << "\n";
-    }
-}
+
 
 // Run the compression/decompression experiment on a matrix of provided dimensions
 void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
     int size = x * y * z;
     std::vector<double> compressTimes(RUNS);
     std::vector<double> mseValues(RUNS);
-    double timingOverhead = measureTimingOverhead();
+    double timingOverhead = Utilities::measureTimingOverhead();
 
     for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
         std::vector<double> originalData;
@@ -118,7 +43,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 
         if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {
             std::cout << "Original Data:\n";
-            printMatrix(originalData, x, y, z);
+            Utilities::printMatrix(originalData, x, y, z);
         }
 
         zfp_field* field = zfp_field_3d(originalData.data(), zfp_type_double, x, y, z);
@@ -146,7 +71,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 
         if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {
             std::cout << "Decompressed Data:\n";
-            printMatrix(decompressedData, x, y, z);
+            Utilities::printMatrix(decompressedData, x, y, z);
         }
 
         zfp_stream_close(zfp);

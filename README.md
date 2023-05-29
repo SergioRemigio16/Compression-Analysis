@@ -21,6 +21,6 @@ you can use the following command to build and run the main.cpp program
 # WindowsVisualStudioSolution
 The WindowsVisualStudioSolution folder contains the same code
 inside the Container except that it is used for windows development.
-To successfully build this solution you need to install  build and link
+To successfully build this solution you need to install, build, and link,
 the zfp library on your machine.
 https://zfp.readthedocs.io/en/release1.0.0/installation.html

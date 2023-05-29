@@ -1,2 +1,5 @@
-﻿  main.cpp
+﻿  CompressionDecompression.cpp
+  main.cpp
+  Utilities.cpp
+  Generating Code...
   CompressionDecompressionFramework.vcxproj -> C:\Users\Sergio\Documents\+CodingProjects\Research Assistant\Compression Algorithms\Compression-Analysis\WindowsVisualStudioSolution\CDF\x64\Debug\CompressionDecompressionFramework.exe
