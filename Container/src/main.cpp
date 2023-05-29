@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <chrono>
 #include <zfp.h>
@@ -10,7 +11,7 @@
 #define WARMUP_RUNS 100
 
 // Compress and decompress matrix using ZFP library
-void compressAndDecompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, std::vector<float>& data) {
+void compressAndDecompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, std::vector<double>& data) {
     void* buffer = malloc(bufsize);
     bitstream* stream = stream_open(buffer, bufsize);
     zfp_stream_set_bit_stream(zfp, stream);
@@ -19,9 +20,9 @@ void compressAndDecompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsi
     zfp_stream_rewind(zfp);
 
     // link the decompressed field with the data vector
-    zfp_field* dec_field = zfp_field_3d(data.data(), zfp_type_float, field->nx, field->ny, field->nz);
+    zfp_field* dec_field = zfp_field_3d(data.data(), zfp_type_double, field->nx, field->ny, field->nz);
     zfp_decompress(zfp, dec_field);
-    
+
     zfp_field_free(dec_field); // free the decompressed field
     stream_close(stream);
     free(buffer);
@@ -30,7 +31,7 @@ void compressAndDecompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsi
 
 
 // Calculate Mean Squared Error (MSE) between original and decompressed data
-double calculateMSE(const std::vector<float>& originalData, const std::vector<float>& decompressedData) {
+double calculateMSE(const std::vector<double>& originalData, const std::vector<double>& decompressedData) {
     double sum = 0.0;
     for (size_t i = 0; i < originalData.size(); i++) {
         double diff = originalData[i] - decompressedData[i];
@@ -47,12 +48,12 @@ double measureTimingOverhead() {
     return overhead.count();
 }
 
-void printMatrix(const std::vector<float>& matrix, int x, int y, int z) {
+void printMatrix(const std::vector<double>& matrix, int x, int y, int z) {
     for (int i = 0; i < z; i++) {
         std::cout << "z = " << i << ":\n";
         for (int j = 0; j < y; j++) {
             for (int k = 0; k < x; k++) {
-                std::cout << matrix[i*x*y + j*x + k] << " ";
+                std::cout << matrix[i * x * y + j * x + k] << " ";
             }
             std::cout << "\n";
         }
@@ -68,8 +69,8 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
     double timingOverhead = measureTimingOverhead();
 
     for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
-        std::vector<float> originalData;
-        std::vector<float> decompressedData(size);
+        std::vector<double> originalData;
+        std::vector<double> decompressedData(size);
 
         // Generate data for each run based on a wave or random distribution
         if (useWave)
@@ -82,11 +83,11 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
             printMatrix(originalData, x, y, z);
         }
 
-        zfp_field* field = zfp_field_3d(originalData.data(), zfp_type_float, x, y, z);
+        zfp_field* field = zfp_field_3d(originalData.data(), zfp_type_double, x, y, z);
         zfp_stream* zfp = zfp_stream_open(NULL);
 
         // Using zfp for maximum accuracy
-        zfp_stream_set_accuracy(zfp, 0.0); 
+        zfp_stream_set_accuracy(zfp, 0.0);
         size_t bufsize = zfp_stream_maximum_size(zfp, field);
 
         auto start = std::chrono::high_resolution_clock::now();
@@ -95,7 +96,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
         std::chrono::duration<double> compressTime = end - start;
 
         if (i >= WARMUP_RUNS) {
-            compressTimes[i - WARMUP_RUNS] = compressTime.count() - timingOverhead;  
+            compressTimes[i - WARMUP_RUNS] = compressTime.count() - timingOverhead;
             mseValues[i - WARMUP_RUNS] = calculateMSE(originalData, decompressedData);
         }
 
@@ -122,19 +123,18 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 
 int main() {
     std::cout << "Matrix Size,Mean Compress-Decompress Time (s),STD Compress-Decompress Time (s),Mean Loss (MSE),STD Loss (MSE) - Wave Distribution" << std::endl;
-    runExperiment(3, 7, 7, true, false);  
-    runExperiment(4, 7, 7, true, false); 
-    runExperiment(5, 7, 7, true, false); 
-    runExperiment(6, 7, 7, true, false); 
-    runExperiment(7, 7, 7, true, false); 
+    runExperiment(3, 7, 7, true, false);
+    runExperiment(4, 7, 7, true, false);
+    runExperiment(5, 7, 7, true, false);
+    runExperiment(6, 7, 7, true, false);
+    runExperiment(7, 7, 7, true, false);
 
     std::cout << "Matrix Size,Mean Compress-Decompress Time (s),STD Compress-Decompress Time (s),Mean Loss (MSE),STD Loss (MSE) - Random Distribution" << std::endl;
-    runExperiment(3, 7, 7, false, false); 
-    runExperiment(4, 7, 7, false, false); 
-    runExperiment(5, 7, 7, false, false); 
-    runExperiment(6, 7, 7, false, false); 
-    runExperiment(7, 7, 7, false, false); 
+    runExperiment(3, 7, 7, false, false);
+    runExperiment(4, 7, 7, false, false);
+    runExperiment(5, 7, 7, false, false);
+    runExperiment(6, 7, 7, false, false);
+    runExperiment(7, 7, 7, false, false);
 
     return 0;
 }
-
