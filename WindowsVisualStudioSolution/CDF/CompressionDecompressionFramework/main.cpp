@@ -10,20 +10,6 @@
 #define RUNS 10000
 #define WARMUP_RUNS 100
 
-
-// Calculate Mean Squared Error (MSE) between original and decompressed data
-double calculateMSE(const std::vector<double>& originalData, const std::vector<double>& decompressedData) {
-    double sum = 0.0;
-    for (size_t i = 0; i < originalData.size(); i++) {
-        double diff = originalData[i] - decompressedData[i];
-        sum += diff * diff;
-    }
-    return sum / originalData.size();
-}
-
-
-
-
 // Run the compression/decompression experiment on a matrix of provided dimensions
 void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
     int size = x * y * z;
@@ -66,7 +52,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 
         if (i >= WARMUP_RUNS) {
             compressTimes[i - WARMUP_RUNS] = compressTime.count() - timingOverhead;
-            mseValues[i - WARMUP_RUNS] = calculateMSE(originalData, decompressedData);
+            mseValues[i - WARMUP_RUNS] = Utilities::calculateMSE(originalData, decompressedData);
         }
 
         if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {

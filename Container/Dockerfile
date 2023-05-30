@@ -55,7 +55,7 @@ RUN cd ~/.vim/bundle/coc.nvim && yarn install && yarn build
 WORKDIR /app/my_project
 
 # Copy the CMakeLists.txt and main.cpp files from the local machine to the Docker image
-COPY src/CMakeLists.txt src/main.cpp src/Utilities.cpp src/Utilities.h ./
+COPY src/CMakeLists.txt src/main.cpp src/Utilities.cpp src/Utilities.h src/CompressionDecompression.cpp src/CompressionDecompression.h ./
 
 # Build the project
 RUN mkdir build && \

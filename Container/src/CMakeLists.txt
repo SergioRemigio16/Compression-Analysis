@@ -14,6 +14,7 @@ find_package(ZFP REQUIRED)
 add_executable(my_project_executable
     main.cpp
     Utilities.cpp
+    CompressionDecompression.cpp
     )
 
 # Include ZFP headers and link ZFP library to your executable.

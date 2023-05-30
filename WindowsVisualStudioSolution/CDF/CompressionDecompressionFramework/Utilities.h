@@ -13,6 +13,7 @@ public:
     static std::vector<double> createMatrixRandom(int x, int y, int z, double minVal, double maxVal);
     static double measureTimingOverhead();
     static void printMatrix(const std::vector<double>& matrix, int x, int y, int z);
+    static double calculateMSE(const std::vector<double>& originalData, const std::vector<double>& decompressedData);
 };
 
 #endif // _UTILITIES_H_
