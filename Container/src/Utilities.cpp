@@ -53,3 +53,15 @@ void Utilities::printMatrix(const std::vector<double>& matrix, int x, int y, int
         std::cout << "\n";
     }
 }
+
+
+// Calculate Mean Squared Error (MSE) between original and decompressed data
+double Utilities::calculateMSE(const std::vector<double>& originalData, const std::vector<double>& decompressedData) {
+    double sum = 0.0;
+    for (size_t i = 0; i < originalData.size(); i++) {
+        double diff = originalData[i] - decompressedData[i];
+        sum += diff * diff;
+    }
+    return sum / originalData.size();
+}
+
