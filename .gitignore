@@ -402,3 +402,40 @@ x64/
 *.sln
 *.vcxproj
 *.vcxproj.filters
+
+# Ignore build output directories
+[Bb]in/
+[Oo]bj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.vs/
+
+# Ignore user-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Ignore Visual Studio temporary files
+*.ncb
+*.sdf
+*.opendb
+
+# Ignore Resharper files
+_ReSharper*/
+
+# Ignore VS Code files
+.vscode/
+*.code-workspace
+
+# Ignore NuGet packages
+*.nupkg
+
+# Misc
+*.log
+*.bak
+*.tmp
+
