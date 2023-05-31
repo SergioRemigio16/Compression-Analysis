@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <chrono>
 #include <zfp.h>
@@ -5,44 +6,62 @@
 #include <numeric>
 #include <cmath>
 #include "Utilities.h"
+#include "CompressionDecompression.h"
 
-// Compress the given matrix using the ZFP library.
-// Input: A zfp_stream, a zfp_field, the buffer size, and a vector of data.
-// Output: The zfp_field of the compressed matrix.
-zfp_field* compressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, std::vector<double>& data) {
-    void* buffer = malloc(bufsize);
-    bitstream* stream = stream_open(buffer, bufsize);
-    zfp_stream_set_bit_stream(zfp, stream);
-    zfp_stream_rewind(zfp);
-    zfp_compress(zfp, field);
-    zfp_stream_rewind(zfp);
+CompressionResult compressData(std::vector<double>& originalData, int x, int y, int z, double precision) {
+	// Creates a new ZFP field in 3D that will be compressed. The field takes the raw data from 'originalData',
+	// specifies that the data type is double, and provides the dimensions of the 3D field (x, y, z).
+	zfp_field* field = zfp_field_3d(originalData.data(), zfp_type_double, x, y, z); 
+	// Opens a new ZFP stream for compression. The argument is NULL because we don't want to use a pre-existing stream.
+	zfp_stream* zfp = zfp_stream_open(NULL);
+	// Sets the compression precision of the ZFP stream. In this case, we want lossless compression,
+	// so the precision is set to 0.0 (meaning no data will be lost in compression).
+	zfp_stream_set_accuracy(zfp, precision);
+	// Gets the maximum buffer size required for the compression.
+	size_t bufsize = zfp_stream_maximum_size(zfp, field);
+	// Create buffer that will hold the compressed data
+	std::vector<unsigned char> buffer(bufsize);
+	// Creates a bitstream that will be used to hold the compressed data.
+	bitstream* stream = stream_open(buffer.data(), bufsize);
+	// Associates the bitstream with the ZFP stream, meaning that when we compress our field,
+	// the data will be written into this bitstream.
+	zfp_stream_set_bit_stream(zfp, stream);
+	// Compresses the field with the ZFP stream.
+	zfp_compress(zfp, field);
 
-    // link the decompressed field with the data vector
-    zfp_field* dec_field = zfp_field_3d(data.data(), zfp_type_double, field->nx, field->ny, field->nz);
+	// Free and close ZFP fields and streams.
+	stream_close(stream);
+	zfp_stream_close(zfp);
+	zfp_field_free(field);
 
-    stream_close(stream);
-    free(buffer);
+	CompressionResult result;
+	result.x = x;
+	result.y = y;
+	result.z = z;
+	result.buffer = std::move(buffer);  // Avoid expensive copy with std::move (transfer ownership)
+	result.bufsize = bufsize;
+	result.precision = precision;
 
-    return dec_field;
+	return result;
 }
 
-// Decompress the given matrix using the ZFP library.
-// Input: A zfp_stream, a zfp_field, the buffer size, and a zfp_field of compressed data.
-// Output: The zfp_field of the decompressed matrix.
-zfp_field* decompressMatrix(zfp_stream* zfp, zfp_field* field, size_t bufsize, zfp_field* dec_field) {
-    void* buffer = malloc(bufsize);
-    bitstream* stream = stream_open(buffer, bufsize);
-    zfp_stream_set_bit_stream(zfp, stream);
-    zfp_stream_rewind(zfp);
-    zfp_compress(zfp, field);
-    zfp_stream_rewind(zfp);
+std::vector<double> decompressData(CompressionResult& result) {
+	std::vector<double> decompressedData(result.x * result.y * result.z);
+	zfp_stream* zfp = zfp_stream_open(NULL);
+	zfp_stream_set_accuracy(zfp, result.precision);
+	// Creates a bitstream that will be used to hold the compressed data.
+	bitstream* stream = stream_open(result.buffer.data(), result.bufsize);
+	zfp_stream_set_bit_stream(zfp, stream);
+	// Creates a new ZFP field in 3D that will be decompressed.
+	zfp_field* dec_field = zfp_field_3d(decompressedData.data(), zfp_type_double, result.x, result.y, result.z);
+	// Decompresses the data into the 'dec_field'.
+	zfp_decompress(zfp, dec_field);
 
-    // link the decompressed field with the data vector
-    zfp_decompress(zfp, dec_field);
-
-    stream_close(stream);
-    zfp_field_free(dec_field); // free the decompressed field
-    free(buffer);
-
-    return dec_field;
+	// Free and close ZFP fields and streams.
+	zfp_field_free(dec_field);
+	stream_close(stream);
+	zfp_stream_close(zfp);
+	return decompressedData;
 }
+
+

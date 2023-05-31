@@ -29,75 +29,6 @@ are also set on the zfp_stream.
 
 
 
-struct CompressionResult {
-	int x;
-	int y;
-	int z;
-	/// <summary>
-	/// Holds the compressed data
-	/// </summary>
-	std::vector<unsigned char> buffer;  
-	size_t bufsize;
-	double precision;
-};
-
-
-CompressionResult compressData(std::vector<double>& originalData, int x, int y, int z, double precision) {
-	// Creates a new ZFP field in 3D that will be compressed. The field takes the raw data from 'originalData',
-	// specifies that the data type is double, and provides the dimensions of the 3D field (x, y, z).
-	zfp_field* field = zfp_field_3d(originalData.data(), zfp_type_double, x, y, z); 
-	// Opens a new ZFP stream for compression. The argument is NULL because we don't want to use a pre-existing stream.
-	zfp_stream* zfp = zfp_stream_open(NULL);
-	// Sets the compression precision of the ZFP stream. In this case, we want lossless compression,
-	// so the precision is set to 0.0 (meaning no data will be lost in compression).
-	zfp_stream_set_accuracy(zfp, precision);
-	// Gets the maximum buffer size required for the compression.
-	size_t bufsize = zfp_stream_maximum_size(zfp, field);
-	// Create buffer that will hold the compressed data
-	std::vector<unsigned char> buffer(bufsize);
-	// Creates a bitstream that will be used to hold the compressed data.
-	bitstream* stream = stream_open(buffer.data(), bufsize);
-	// Associates the bitstream with the ZFP stream, meaning that when we compress our field,
-	// the data will be written into this bitstream.
-	zfp_stream_set_bit_stream(zfp, stream);
-	// Compresses the field with the ZFP stream.
-	zfp_compress(zfp, field);
-
-	// Free and close ZFP fields and streams.
-	stream_close(stream);
-	zfp_stream_close(zfp);
-	zfp_field_free(field);
-
-	CompressionResult result;
-	result.x = x;
-	result.y = y;
-	result.z = z;
-	result.buffer = std::move(buffer);  // Avoid expensive copy with std::move (transfer ownership)
-	result.bufsize = bufsize;
-	result.precision = precision;
-
-	return result;
-}
-
-
-void decompressData(std::vector<double>& decompressedData, CompressionResult& result) {
-	zfp_stream* zfp = zfp_stream_open(NULL);
-	zfp_stream_set_accuracy(zfp, result.precision);
-	// Creates a bitstream that will be used to hold the compressed data.
-	bitstream* stream = stream_open(result.buffer.data(), result.bufsize);
-	zfp_stream_set_bit_stream(zfp, stream);
-	// Creates a new ZFP field in 3D that will be decompressed.
-	zfp_field* dec_field = zfp_field_3d(decompressedData.data(), zfp_type_double, result.x, result.y, result.z);
-	// Decompresses the data into the 'dec_field'.
-	zfp_decompress(zfp, dec_field);
-
-	// Free and close ZFP fields and streams.
-	zfp_field_free(dec_field);
-	stream_close(stream);
-	zfp_stream_close(zfp);
-}
-
-
 // This function runs the compression/decompression experiment on a 3D matrix of provided dimensions
 void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 	double precision = 0.0;
@@ -110,7 +41,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 
 	// Run the experiment for the specified number of runs plus the warm-up runs
 	for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
-		std::vector<double> originalData(size), decompressedData(size);
+		std::vector<double> originalData(size);
 
 		// Depending on useWave, generate data for each run based on a wave or random distribution
 		originalData = useWave ? Utilities::createMatrixWave(x, y, z, 1.0f, 1.0f, 0.0f) :
@@ -127,7 +58,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 		std::chrono::duration<double> compressTime = end - start;
 
 		start = std::chrono::high_resolution_clock::now();
-		decompressData(decompressedData, compressionResult);
+		std::vector<double> decompressedData = decompressData(compressionResult);
 		end = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> decompressTime = end - start;
 
@@ -144,45 +75,34 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 		}
 	}
 
-	// Compute the means and standard deviations of the compression times, decompression times, and MSEs
+	// Compute the means of the compression times, decompression times, and MSEs
 	double meanCompressTime = std::accumulate(compressTimes.begin(), compressTimes.end(), 0.0) / RUNS;
 	double meanDecompressTime = std::accumulate(decompressTimes.begin(), decompressTimes.end(), 0.0) / RUNS;
 	double meanMSE = std::accumulate(mseValues.begin(), mseValues.end(), 0.0) / RUNS;
 
-	double sq_sum1 = std::inner_product(compressTimes.begin(), compressTimes.end(), compressTimes.begin(), 0.0);
-	double stdCompressTime = std::sqrt(sq_sum1 / compressTimes.size() - meanCompressTime * meanCompressTime);
-
-	double sq_sum2 = std::inner_product(decompressTimes.begin(), decompressTimes.end(), decompressTimes.begin(), 0.0);
-	double stdDecompressTime = std::sqrt(sq_sum2 / decompressTimes.size() - meanDecompressTime * meanDecompressTime);
-
-	double sq_sum3 = std::inner_product(mseValues.begin(), mseValues.end(), mseValues.begin(), 0.0);
-	double stdMSE = std::sqrt(sq_sum3 / mseValues.size() - meanMSE * meanMSE);
-
 	// Print the results
-	std::cout << x << "x" << y << "x" << z << "," << meanCompressTime << "," << stdCompressTime << "," << meanDecompressTime << "," << stdDecompressTime << "," << meanMSE << "," << stdMSE << std::endl;
+	std::cout << x << "x" << y << "x" << z << "," << meanCompressTime << "," << meanDecompressTime << "," << meanMSE << std::endl;
 }
 
 // The main function
 int main() {
 	// Print the header for the results
-	std::cout << "Matrix Size,Mean Compression Time (s),STD Compression Time (s),Mean Decompression Time (s),STD Decompression Time (s),Mean Loss (MSE),STD Loss (MSE) - Wave Distribution" << std::endl;
+	std::cout << "Matrix Size,Mean Compression Time (s),Mean Decompression Time (s),Mean Loss (MSE) - Wave Distribution" << std::endl;
 	// Run the experiment for wave distribution
-	runExperiment(3, 7, 7, true, true);
-	/*
+	runExperiment(3, 7, 7, true, false);
 	runExperiment(4, 7, 7, true, false);
 	runExperiment(5, 7, 7, true, false);
 	runExperiment(6, 7, 7, true, false);
 	runExperiment(7, 7, 7, true, false);
 
 	// Print the header for the results
-	std::cout << "Matrix Size,Mean Compression Time (s),STD Compression Time (s),Mean Decompression Time (s),STD Decompression Time (s),Mean Loss (MSE),STD Loss (MSE) - Random Distribution" << std::endl;
+	std::cout << "Matrix Size,Mean Compression Time (s),Mean Decompression Time (s),Mean Loss (MSE) - Random Distribution" << std::endl;
 	// Run the experiment for random distribution
 	runExperiment(3, 7, 7, false, false);
 	runExperiment(4, 7, 7, false, false);
 	runExperiment(5, 7, 7, false, false);
 	runExperiment(6, 7, 7, false, false);
 	runExperiment(7, 7, 7, false, false);
-	*/
 
 	return 0;
 }
