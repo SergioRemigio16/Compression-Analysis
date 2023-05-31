@@ -26,6 +26,7 @@ size_t calculateSize(const CompressionResult& compressionResult) {
 
 void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
     double precision = 0.001;
+    int rate = 8;
     int size = x * y * z;
     std::vector<double> compressTimes(RUNS), decompressTimes(RUNS), mseValues(RUNS);
     std::vector<size_t> originalSizes(RUNS), compressedSizes(RUNS), decompressedSizes(RUNS), totalCompressedSizes(RUNS);
@@ -42,12 +43,12 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
         }
 
         auto start = std::chrono::high_resolution_clock::now();
-        CompressionResult compressionResult = compressMatrix(originalMatrix, x, y, z, 8);
+        CompressionResult compressionResult = compressMatrixFixedRate(originalMatrix, x, y, z, rate);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> compressTime = end - start;
 
         start = std::chrono::high_resolution_clock::now();
-        std::vector<double> decompressedMatrix = decompressMatrix(compressionResult);
+        std::vector<double> decompressedMatrix = decompressMatrixFixedRate(compressionResult);
         end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> decompressTime = end - start;
 
@@ -82,12 +83,17 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
 int main() {
     std::cout << "Matrix Size,Mean Compression Time (s),Mean Decompression Time (s),Mean Loss (MSE),Mean Original Size (bytes),Mean Compressed Size (bytes),Mean Decompressed Size (bytes),Mean Total Compressed Size (bytes) - Wave Distribution" << std::endl;
     runExperiment(3, 7, 7, true, false);
+    runExperiment(4, 7, 7, true, false);
+    runExperiment(5, 7, 7, true, false);
+    runExperiment(6, 7, 7, true, false);
     runExperiment(7, 7, 7, true, false);
 
     std::cout << "Matrix Size,Mean Compression Time (s),Mean Decompression Time (s),Mean Loss (MSE),Mean Original Size (bytes),Mean Compressed Size (bytes),Mean Decompressed Size (bytes),Mean Total Compressed Size (bytes) - Random Distribution" << std::endl;
     runExperiment(3, 7, 7, false, false);
+    runExperiment(4, 7, 7, false, false);
+    runExperiment(5, 7, 7, false, false);
+    runExperiment(6, 7, 7, false, false);
     runExperiment(7, 7, 7, false, false);
-    runExperiment(200, 200, 200, false, false);
 
     return 0;
 }
