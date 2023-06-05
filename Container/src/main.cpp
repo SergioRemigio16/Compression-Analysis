@@ -1,3 +1,4 @@
+
 #include <fstream>
 #include <iostream>
 #include <chrono>
@@ -8,11 +9,8 @@
 #include "Utilities.h"
 #include "CompressionDecompression.h"
 
-// Define the number of runs for the experiment and the warm-up runs
-//#define RUNS 10000
-//#define WARMUP_RUNS 100
-#define RUNS 1
-#define WARMUP_RUNS 1
+#define RUNS 1000
+#define WARMUP_RUNS 100
 
 size_t calculateSize(const std::vector<double>& matrix) {
     return matrix.size() * sizeof(double);
@@ -24,9 +22,7 @@ size_t calculateSize(const CompressionResult& compressionResult) {
         sizeof(compressionResult.rate);
 }
 
-void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
-    double precision = 0.001;
-    int rate = 8;
+void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int rate) {
     int size = x * y * z;
     std::vector<double> compressTimes(RUNS), decompressTimes(RUNS), mseValues(RUNS);
     std::vector<size_t> originalSizes(RUNS), compressedSizes(RUNS), decompressedSizes(RUNS), totalCompressedSizes(RUNS);
@@ -76,24 +72,26 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData) {
     size_t meanDecompressedSize = std::accumulate(decompressedSizes.begin(), decompressedSizes.end(), 0.0) / RUNS;
     size_t meanTotalCompressedSize = std::accumulate(totalCompressedSizes.begin(), totalCompressedSizes.end(), 0.0) / RUNS;
 
-    std::cout << x << "x" << y << "x" << z << "," << meanCompressTime << "," << meanDecompressTime << "," << meanMSE
-        << "," << meanOriginalSize << "," << meanCompressedSize << "," << meanDecompressedSize << "," << meanTotalCompressedSize << std::endl;
+    std::cout << "Rate: " << rate << ", " << x << "x" << y << "x" << z << ", " << meanCompressTime << ", " << meanDecompressTime << ", " << meanMSE
+        << ", " << meanOriginalSize << ", " << meanCompressedSize << ", " << meanDecompressedSize << ", " << meanTotalCompressedSize << std::endl;
+}
+
+void runExperimentsForRates(int x, int y, int z, bool useWave, bool visualizeData, int minRate, int maxRate) {
+    for (int rate = minRate; rate <= maxRate; ++rate) {
+        runExperiment(x, y, z, useWave, visualizeData, rate);
+    }
 }
 
 int main() {
-    std::cout << "Matrix Size,Mean Compression Time (s),Mean Decompression Time (s),Mean Loss (MSE),Mean Original Size (bytes),Mean Compressed Size (bytes),Mean Decompressed Size (bytes),Mean Total Compressed Size (bytes) - Wave Distribution" << std::endl;
-    runExperiment(3, 7, 7, true, false);
-    runExperiment(4, 7, 7, true, false);
-    runExperiment(5, 7, 7, true, false);
-    runExperiment(6, 7, 7, true, false);
-    runExperiment(7, 7, 7, true, false);
+    int minRate = 1;
+    int maxRate = 64;
 
-    std::cout << "Matrix Size,Mean Compression Time (s),Mean Decompression Time (s),Mean Loss (MSE),Mean Original Size (bytes),Mean Compressed Size (bytes),Mean Decompressed Size (bytes),Mean Total Compressed Size (bytes) - Random Distribution" << std::endl;
-    runExperiment(3, 7, 7, false, false);
-    runExperiment(4, 7, 7, false, false);
-    runExperiment(5, 7, 7, false, false);
-    runExperiment(6, 7, 7, false, false);
-    runExperiment(7, 7, 7, false, false);
+    std::cout << "Rate, Matrix Size, Mean Compression Time (s), Mean Decompression Time (s), Mean Loss (MSE), Mean Original Size (bytes), Mean Compressed Size (bytes), Mean Decompressed Size (bytes), Mean Total Compressed Size (bytes) - Random Distribution" << std::endl;
+    runExperimentsForRates(3, 7, 7, false, false, minRate, maxRate);
+    //runExperimentsForRates(4, 7, 7, false, false, minRate, maxRate);
+    //runExperimentsForRates(5, 7, 7, false, false, minRate, maxRate);
+    //runExperimentsForRates(6, 7, 7, false, false, minRate, maxRate);
+    //runExperimentsForRates(7, 7, 7, false, false, minRate, maxRate);
 
     return 0;
 }
