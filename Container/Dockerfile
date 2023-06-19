@@ -13,8 +13,8 @@ RUN apt-get update && \
         libboost-all-dev \
         vim \
         dos2unix \
-        curl
-
+        curl \
+        libfftw3-dev
 
 # Clone the repository and build zfp
 RUN git clone https://github.com/LLNL/zfp.git /app/zfp && \
@@ -24,32 +24,6 @@ RUN git clone https://github.com/LLNL/zfp.git /app/zfp && \
     cmake -DZFP_WITH_OPENMP=OFF .. && \
     cmake --build . --config Release && \
     ctest
-
-# ---------------------------vimrc----------------------------------------
-
-# Install Node.js for coc.nvim
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
-    apt-get install -y nodejs
-
-# Install Yarn
-RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
-    apt-get update && apt-get install yarn
-
-# Install Vundle for Vim
-RUN git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-
-# Copy the .vimrc file to the root's home directory
-COPY src/.vimrc /root/
-
-# Convert .vimrc to Unix format and install Vim plugins
-RUN dos2unix /root/.vimrc && \
-    vim +PluginInstall +qall
-
-# Compile coc.nvim
-RUN cd ~/.vim/bundle/coc.nvim && yarn install && yarn build
-
-# ---------------------------vimrc----------------------------------------
 
 # Create a new project directory and set it as the working directory
 WORKDIR /app/my_project

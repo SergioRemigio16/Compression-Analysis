@@ -9,8 +9,8 @@
 #include "Utilities.h"
 #include "CompressionDecompression.h"
 
-CompressionResult compressMatrixFixedRate(std::vector<double>& originalData, int x, int y, int z, uint rate) {
-	zfp_field* field = zfp_field_3d(originalData.data(), zfp_type_double, x, y, z);
+CompressionResult compressMatrixFixedRate(double*& originalData, int x, int y, int z, uint rate) {
+	zfp_field* field = zfp_field_3d(originalData, zfp_type_double, x, y, z);
 	zfp_stream* zfp = zfp_stream_open(NULL);
 
 	// Set the compression rate instead of accuracy
@@ -35,15 +35,15 @@ CompressionResult compressMatrixFixedRate(std::vector<double>& originalData, int
 	return result;
 }
 
-std::vector<double> decompressMatrixFixedRate(CompressionResult& result) {
+double* decompressMatrixFixedRate(CompressionResult& result) {
 	zfp_stream* zfp = zfp_stream_open(NULL);
 
 	// Set the decompression rate instead of accuracy
 	zfp_stream_set_rate(zfp, result.rate, zfp_type_double, 3, 0);
 	bitstream* stream = stream_open(result.buffer.data(), result.bufsize);
 	zfp_stream_set_bit_stream(zfp, stream);
-	std::vector<double> decompressedData(result.x * result.y * result.z);
-	zfp_field* dec_field = zfp_field_3d(decompressedData.data(), zfp_type_double, result.x, result.y, result.z);
+	double* decompressedData = new double[result.x * result.y * result.z];
+	zfp_field* dec_field = zfp_field_3d(decompressedData, zfp_type_double, result.x, result.y, result.z);
 	zfp_decompress(zfp, dec_field);
 	zfp_field_free(dec_field);
 	stream_close(stream);
@@ -52,10 +52,11 @@ std::vector<double> decompressMatrixFixedRate(CompressionResult& result) {
 }
 
 
-CompressionResult compressMatrixAccuracy(std::vector<double>& originalData, int x, int y, int z, double precision) {
+
+CompressionResult compressMatrixAccuracy(double*& originalData, int x, int y, int z, double precision) {
 	// Creates a new ZFP field in 3D that will be compressed. The field takes the raw data from 'originalData',
 	// specifies that the data type is double, and provides the dimensions of the 3D field (x, y, z).
-	zfp_field* field = zfp_field_3d(originalData.data(), zfp_type_double, x, y, z);
+	zfp_field* field = zfp_field_3d(originalData, zfp_type_double, x, y, z);
 	// Opens a new ZFP stream for compression. The argument is NULL because we don't want to use a pre-existing stream.
 	zfp_stream* zfp = zfp_stream_open(NULL);
 	// Sets the compression precision of the ZFP stream. In this case, we want lossless compression,
@@ -104,16 +105,16 @@ CompressionResult compressMatrixAccuracy(std::vector<double>& originalData, int 
 
 
 
-std::vector<double> decompressMatrixAccuracy(CompressionResult& result) {
+double* decompressMatrixAccuracy(CompressionResult& result) {
 	zfp_stream* zfp = zfp_stream_open(NULL);
 	zfp_stream_set_accuracy(zfp, result.precision);
 	// Creates a bitstream that will be used to hold the compressed data.
 	bitstream* stream = stream_open(result.buffer.data(), result.bufsize);
 	zfp_stream_set_bit_stream(zfp, stream);
 	// Where the decompressedData will be placed
-	std::vector<double> decompressedData(result.x * result.y * result.z);
+	double* decompressedData = new double[result.x * result.y * result.z];
 	// Creates a new ZFP field in 3D that will be decompressed.
-	zfp_field* dec_field = zfp_field_3d(decompressedData.data(), zfp_type_double, result.x, result.y, result.z);
+	zfp_field* dec_field = zfp_field_3d(decompressedData, zfp_type_double, result.x, result.y, result.z);
 	// Decompresses the data into the 'dec_field'.
 	zfp_decompress(zfp, dec_field);
 
@@ -127,7 +128,7 @@ std::vector<double> decompressMatrixAccuracy(CompressionResult& result) {
 
 
 // Compress the input data using FFT and keep the COMPRESS_SIZE strongest frequencies.
-CompressionResultFFT compressMatrixFFT(const std::vector<double>& originalMatrix, int x, int y, int z, int compressSize) {
+CompressionResultFFT compressMatrixFFT(const double*& originalMatrix, int x, int y, int z, int compressSize) {
 	CompressionResultFFT result;
 	result.x = x;
 	result.y = y;
@@ -162,7 +163,7 @@ CompressionResultFFT compressMatrixFFT(const std::vector<double>& originalMatrix
 }
 
 // Decompress the data using inverse FFT.
-std::vector<double> decompressMatrixFFT(const CompressionResultFFT& compressionResult) {
+double* decompressMatrixFFT(const CompressionResultFFT& compressionResult) {
 	int size = compressionResult.x * compressionResult.y * compressionResult.z;
 
 	// Prepare the input data for inverse FFT.
@@ -182,7 +183,7 @@ std::vector<double> decompressMatrixFFT(const CompressionResultFFT& compressionR
 	fftw_execute(p);
 
 	// Copy the decompressed data to the output vector.
-	std::vector<double> decompressedMatrix(size);
+	double* decompressedMatrix = new double[size];
 	for (int i = 0; i < size; ++i) {
 		decompressedMatrix[i] = out[i][0]; // we only need the real part
 	}

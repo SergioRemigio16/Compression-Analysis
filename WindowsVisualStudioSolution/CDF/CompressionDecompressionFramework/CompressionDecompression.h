@@ -27,13 +27,13 @@ struct CompressionResultFFT {
 };
 
 
-CompressionResult compressMatrixFixedRate(std::vector<double>& originalData, int x, int y, int z, uint rate);
-CompressionResult compressMatrixAccuracy(std::vector<double>& originalData, int x, int y, int z, double precision);
-std::vector<double> decompressMatrixFixedRate(CompressionResult& result);
-std::vector<double> decompressMatrixAccuracy(CompressionResult& result);
+CompressionResult compressMatrixFixedRate(double*& originalData, int x, int y, int z, uint rate);
+CompressionResult compressMatrixAccuracy(double*& originalData, int x, int y, int z, double precision);
+double* decompressMatrixFixedRate(CompressionResult& result);
+double* decompressMatrixAccuracy(CompressionResult& result);
 
 
-CompressionResultFFT compressMatrixFFT(const std::vector<double>& originalMatrix, int x, int y, int z, int compressSize);
-std::vector<double> decompressMatrixFFT(const CompressionResultFFT& compressionResult);
+CompressionResultFFT compressMatrixFFT(double*& originalMatrix, int x, int y, int z, int compressSize);
+double* decompressMatrixFFT(const CompressionResultFFT& compressionResult);
 
 #endif // _COMPRESSIONDECOMPRESSION_H_

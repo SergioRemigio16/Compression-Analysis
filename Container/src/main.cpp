@@ -1,97 +1,85 @@
-
-#include <fstream>
-#include <iostream>
-#include <chrono>
-#include <zfp.h>
-#include <vector>
-#include <numeric>
-#include <cmath>
-#include "Utilities.h"
-#include "CompressionDecompression.h"
-
-#define RUNS 1000
-#define WARMUP_RUNS 100
-
-size_t calculateSize(const std::vector<double>& matrix) {
-    return matrix.size() * sizeof(double);
-}
-
-size_t calculateSize(const CompressionResult& compressionResult) {
-    return sizeof(compressionResult.x) + sizeof(compressionResult.y) + sizeof(compressionResult.z) +
-        compressionResult.buffer.size() * sizeof(unsigned char) + sizeof(compressionResult.bufsize) +
-        sizeof(compressionResult.rate);
-}
-
-void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int rate) {
-    int size = x * y * z;
-    std::vector<double> compressTimes(RUNS), decompressTimes(RUNS), mseValues(RUNS);
-    std::vector<size_t> originalSizes(RUNS), compressedSizes(RUNS), decompressedSizes(RUNS), totalCompressedSizes(RUNS);
-    double timingOverhead = Utilities::measureTimingOverhead();
-
-    for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
-        std::vector<double> originalMatrix(size);
-        originalMatrix = useWave ? Utilities::createMatrixWave(x, y, z, 1.0f, 1.0f, 0.0f) :
-            Utilities::createMatrixRandom(x, y, z, 0.0f, 1.0f);
-
-        if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {
-            std::cout << "Original Data:\n";
-            Utilities::printMatrix(originalMatrix, x, y, z);
-        }
-
-        auto start = std::chrono::high_resolution_clock::now();
-        CompressionResult compressionResult = compressMatrixFixedRate(originalMatrix, x, y, z, rate);
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> compressTime = end - start;
-
-        start = std::chrono::high_resolution_clock::now();
-        std::vector<double> decompressedMatrix = decompressMatrixFixedRate(compressionResult);
-        end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> decompressTime = end - start;
-
-        if (i >= WARMUP_RUNS) {
-            compressTimes[i - WARMUP_RUNS] = compressTime.count() - timingOverhead;
-            decompressTimes[i - WARMUP_RUNS] = decompressTime.count() - timingOverhead;
-            mseValues[i - WARMUP_RUNS] = Utilities::calculateMSE(originalMatrix, decompressedMatrix);
-            originalSizes[i - WARMUP_RUNS] = calculateSize(originalMatrix);
-            compressedSizes[i - WARMUP_RUNS] = compressionResult.bufsize;
-            decompressedSizes[i - WARMUP_RUNS] = calculateSize(decompressedMatrix);
-            totalCompressedSizes[i - WARMUP_RUNS] = calculateSize(compressionResult);
-        }
-
-        if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {
-            std::cout << "Decompressed Data:\n";
-            Utilities::printMatrix(decompressedMatrix, x, y, z);
-        }
-    }
-
-    double meanCompressTime = std::accumulate(compressTimes.begin(), compressTimes.end(), 0.0) / RUNS;
-    double meanDecompressTime = std::accumulate(decompressTimes.begin(), decompressTimes.end(), 0.0) / RUNS;
-    double meanMSE = std::accumulate(mseValues.begin(), mseValues.end(), 0.0) / RUNS;
-    size_t meanOriginalSize = std::accumulate(originalSizes.begin(), originalSizes.end(), 0.0) / RUNS;
-    size_t meanCompressedSize = std::accumulate(compressedSizes.begin(), compressedSizes.end(), 0.0) / RUNS;
-    size_t meanDecompressedSize = std::accumulate(decompressedSizes.begin(), decompressedSizes.end(), 0.0) / RUNS;
-    size_t meanTotalCompressedSize = std::accumulate(totalCompressedSizes.begin(), totalCompressedSizes.end(), 0.0) / RUNS;
-
-    std::cout << "Rate: " << rate << ", " << x << "x" << y << "x" << z << ", " << meanCompressTime << ", " << meanDecompressTime << ", " << meanMSE
-        << ", " << meanOriginalSize << ", " << meanCompressedSize << ", " << meanDecompressedSize << ", " << meanTotalCompressedSize << std::endl;
-}
-
-void runExperimentsForRates(int x, int y, int z, bool useWave, bool visualizeData, int minRate, int maxRate) {
-    for (int rate = minRate; rate <= maxRate; ++rate) {
-        runExperiment(x, y, z, useWave, visualizeData, rate);
-    }
-}
+/*
+#include "TimingExperiment.h"
+#include "FFTTesting.cpp"
 
 int main() {
-    int minRate = 1;
-    int maxRate = 64;
+	return runFFTTesting();
+}
+*/
 
-    std::cout << "Rate, Matrix Size, Mean Compression Time (s), Mean Decompression Time (s), Mean Loss (MSE), Mean Original Size (bytes), Mean Compressed Size (bytes), Mean Decompressed Size (bytes), Mean Total Compressed Size (bytes) - Random Distribution" << std::endl;
-    runExperimentsForRates(3, 7, 7, false, false, minRate, maxRate);
-    //runExperimentsForRates(4, 7, 7, false, false, minRate, maxRate);
-    //runExperimentsForRates(5, 7, 7, false, false, minRate, maxRate);
-    //runExperimentsForRates(6, 7, 7, false, false, minRate, maxRate);
-    //runExperimentsForRates(7, 7, 7, false, false, minRate, maxRate);
+
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <complex>
+#include <fftw3.h>
+
+// Define typedef for convenience
+typedef std::vector<std::complex<double>> ComplexVec;
+
+int main() {
+    size_t x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
+    double compressionRatio = 0.1; // Compression ratio. 0.5 means keeping half of the frequency components.
+
+    // Define original matrix
+    std::vector<double> originalMatrix(x * y * z);
+
+    // Initialize the original matrix with some data
+    for (size_t i = 0; i < x * y * z; ++i) {
+        originalMatrix[i] = i;
+    }
+
+    // Print original matrix
+    std::cout << "Original Matrix:\n";
+    for (const auto& val : originalMatrix) {
+        std::cout << val << ' ';
+    }
+    std::cout << "\n";
+
+    // Perform FFT
+    ComplexVec complexMatrix(x * y * z);
+    fftw_plan p = fftw_plan_dft_r2c_3d(x, y, z, originalMatrix.data(),
+        reinterpret_cast<fftw_complex*>(complexMatrix.data()), FFTW_ESTIMATE);
+    fftw_execute(p);
+    fftw_destroy_plan(p);
+
+    // Compress the data by zeroing out the least significant components
+    size_t compressedSize = static_cast<size_t>(x * y * z * compressionRatio);
+    for (size_t i = compressedSize; i < x * y * z; ++i) {
+        complexMatrix[i] = 0;
+    }
+
+    // Perform inverse FFT
+    std::vector<double> decompressedMatrix(x * y * z);
+    fftw_plan q = fftw_plan_dft_c2r_3d(x, y, z, reinterpret_cast<fftw_complex*>(complexMatrix.data()),
+        decompressedMatrix.data(), FFTW_ESTIMATE);
+    fftw_execute(q);
+    fftw_destroy_plan(q);
+
+    // FFTW's backwards transform does not normalize the result, so we have to do it manually
+    for (size_t i = 0; i < x * y * z; ++i) {
+        decompressedMatrix[i] /= (x * y * z);
+    }
+
+    // Print decompressed matrix
+    std::cout << "Decompressed Matrix:\n";
+    for (const auto& val : decompressedMatrix) {
+        std::cout << val << ' ';
+    }
+    std::cout << "\n";
+
+    // Print size of original and compressed matrices in bytes
+    std::cout << "Size of original matrix (bytes): " << originalMatrix.size() * sizeof(double) << "\n";
+    std::cout << "Size of compressed matrix (bytes): " << compressedSize * sizeof(std::complex<double>) << "\n";
+
+    // Compute and print Mean Squared Error
+    double mse = 0;
+    for (size_t i = 0; i < x * y * z; ++i) {
+        double error = originalMatrix[i] - decompressedMatrix[i];
+        mse += error * error;
+    }
+    mse /= (x * y * z);
+    std::cout << "Mean Squared Error: " << mse << "\n";
 
     return 0;
 }

@@ -1,13 +1,10 @@
-/*
 #include "TimingExperiment.h"
-#include "FFTTesting.cpp"
 
 int main() {
-	return runFFTTesting();
+	return runTimingExperiment();
 }
-*/
 
-
+/*
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -83,3 +80,4 @@ int main() {
 
     return 0;
 }
+*/

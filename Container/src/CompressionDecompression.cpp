@@ -1,6 +1,8 @@
 #include <iostream>
 #include <chrono>
+#include <complex>
 #include <zfp.h>
+#include <fftw3.h>
 #include <vector>
 #include <numeric>
 #include <cmath>
@@ -122,3 +124,73 @@ std::vector<double> decompressMatrixAccuracy(CompressionResult& result) {
 	return decompressedData;
 }
 
+
+
+// Compress the input data using FFT and keep the COMPRESS_SIZE strongest frequencies.
+CompressionResultFFT compressMatrixFFT(const std::vector<double>& originalMatrix, int x, int y, int z, int compressSize) {
+	CompressionResultFFT result;
+	result.x = x;
+	result.y = y;
+	result.z = z;
+	result.compressSize = compressSize;
+
+	// Prepare the input data for FFTW.
+	int size = x * y * z;
+	fftw_complex* in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * size);
+	for (int i = 0; i < size; ++i) {
+		in[i][0] = originalMatrix[i]; // real part
+		in[i][1] = 0; // imaginary part
+	}
+
+	// Execute FFT using FFTW.
+	fftw_complex* out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * size);
+	fftw_plan p = fftw_plan_dft_1d(size, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftw_execute(p);
+
+	// Select the COMPRESS_SIZE strongest frequencies and store their indices and values.
+	for (int i = 0; i < compressSize; ++i) {
+		result.indices.push_back(i);
+		result.frequencies.push_back(std::complex<double>(out[i][0], out[i][1]));
+	}
+
+	// Clean up.
+	fftw_destroy_plan(p);
+	fftw_free(in);
+	fftw_free(out);
+
+	return result;
+}
+
+// Decompress the data using inverse FFT.
+std::vector<double> decompressMatrixFFT(const CompressionResultFFT& compressionResult) {
+	int size = compressionResult.x * compressionResult.y * compressionResult.z;
+
+	// Prepare the input data for inverse FFT.
+	fftw_complex* in = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * size);
+	for (int i = 0; i < size; ++i) {
+		in[i][0] = 0; // real part
+		in[i][1] = 0; // imaginary part
+	}
+	for (int i = 0; i < compressionResult.compressSize; ++i) {
+		in[compressionResult.indices[i]][0] = compressionResult.frequencies[i].real();
+		in[compressionResult.indices[i]][1] = compressionResult.frequencies[i].imag();
+	}
+
+	// Execute inverse FFT.
+	fftw_complex* out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * size);
+	fftw_plan p = fftw_plan_dft_1d(size, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
+	fftw_execute(p);
+
+	// Copy the decompressed data to the output vector.
+	std::vector<double> decompressedMatrix(size);
+	for (int i = 0; i < size; ++i) {
+		decompressedMatrix[i] = out[i][0]; // we only need the real part
+	}
+
+	// Clean up.
+	fftw_destroy_plan(p);
+	fftw_free(in);
+	fftw_free(out);
+
+	return decompressedMatrix;
+}
