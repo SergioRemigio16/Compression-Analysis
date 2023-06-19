@@ -1,11 +1,10 @@
 #include "TimingExperiment.h"
 
-/*
 int main() {
 	return runTimingExperiment();
 }
-*/
 
+/*
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -85,5 +84,5 @@ int main() {
 
     return 0;
 }
-
+*/
 

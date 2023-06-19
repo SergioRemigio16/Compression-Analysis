@@ -40,7 +40,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int ra
     for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
         double* originalMatrix = nullptr;
         if (useWave)
-            originalMatrix = Utilities::createMatrixWave(x, y, z, 1.0, 1.0, 0.0);
+            originalMatrix = Utilities::createMatrixWave(x, y, z, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
         else
             originalMatrix = Utilities::createMatrixRandom(x, y, z, 0.0, 1.0);
 
@@ -99,7 +99,11 @@ int runTimingExperiment() {
     int maxRate = 64;
 
     std::cout << "Rate, Matrix Size, Mean Compression Time (s), Mean Decompression Time (s), Mean Loss (MSE), Mean Original Size (bytes), Mean Compressed Size (bytes), Mean Total Compressed Size (bytes) - Random Distribution" << std::endl;
-    runExperimentsForRates(3, 7, 7, false, false, minRate, maxRate);
+    runExperimentsForRates(3, 7, 7, true, false, minRate, maxRate);
+
+
+    double* testMatrix = Utilities::createMatrixWave(3, 7, 7, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+    Utilities::writeWaveToCSV(testMatrix, 3, 7, 7, "wave_data.csv");
 
     //runExperimentsForRates(4, 7, 7, false, false, minRate, maxRate);
     //runExperimentsForRates(5, 7, 7, false, false, minRate, maxRate);
