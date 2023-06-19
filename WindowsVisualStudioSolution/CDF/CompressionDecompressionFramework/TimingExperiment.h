@@ -15,7 +15,7 @@
 #define WARMUP_RUNS 100
 
 // Calculate size of a double vector
-size_t calculateSize(const double*& matrix);
+size_t calculateSize(size_t size);
 
 // Calculate size of a compression result
 size_t calculateSize(const CompressionResult& compressionResult);
