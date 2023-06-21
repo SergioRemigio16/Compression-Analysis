@@ -13,6 +13,9 @@
 
 #define RUNS 1000
 #define WARMUP_RUNS 100
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // Calculate size of a double vector
 size_t calculateSize(size_t size);

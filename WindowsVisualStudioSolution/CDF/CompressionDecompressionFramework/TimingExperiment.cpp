@@ -8,6 +8,7 @@
 #include <vector>
 #include "Utilities.h"
 #include "CompressionDecompression.h"
+#include "TimingExperiment.h"
 
 #define RUNS 1000
 #define WARMUP_RUNS 100
@@ -99,11 +100,17 @@ int runTimingExperiment() {
     int maxRate = 64;
 
     std::cout << "Rate, Matrix Size, Mean Compression Time (s), Mean Decompression Time (s), Mean Loss (MSE), Mean Original Size (bytes), Mean Compressed Size (bytes), Mean Total Compressed Size (bytes) - Random Distribution" << std::endl;
-    runExperimentsForRates(3, 7, 7, true, false, minRate, maxRate);
+    //runExperimentsForRates(3, 7, 7, true, false, minRate, maxRate);
 
+    int x = 3;
+    int y = 3;
+    int z = 7;
+    double frequency = 1;
+    double amplitude = M_PI;
+    double phase = 0;
 
-    double* testMatrix = Utilities::createMatrixWave(3, 7, 7, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
-    Utilities::writeWaveToCSV(testMatrix, 3, 7, 7, "wave_data.csv");
+    double* testMatrix = Utilities::createMatrixWave(x, y, z, frequency, amplitude, phase, 1.0, 1.0, 7);
+    Utilities::writeWaveToCSV(testMatrix, x, y, z, "wave_data.csv");
 
     //runExperimentsForRates(4, 7, 7, false, false, minRate, maxRate);
     //runExperimentsForRates(5, 7, 7, false, false, minRate, maxRate);
