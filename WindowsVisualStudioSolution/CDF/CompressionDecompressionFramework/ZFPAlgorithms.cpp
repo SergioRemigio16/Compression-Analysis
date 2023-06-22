@@ -7,7 +7,7 @@
 #include <numeric>
 #include <cmath>
 #include "Utilities.h"
-#include "CompressionDecompression.h"
+#include "ZFPAlgorithms.h"
 
 CompressionResult compressMatrixFixedRate(double*& originalData, int x, int y, int z, uint rate) {
 	zfp_field* field = zfp_field_3d(originalData, zfp_type_double, x, y, z);

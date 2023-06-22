@@ -1,4 +1,5 @@
 #include "TimingExperiment.h"
+#include <Eigen/Dense>
 
 int main() {
 	return runTimingExperiment();

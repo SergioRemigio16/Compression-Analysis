@@ -7,7 +7,7 @@
 #include <cmath>
 #include <vector>
 #include "Utilities.h"
-#include "CompressionDecompression.h"
+#include "ZFPAlgorithms.h"
 #include "TimingExperiment.h"
 
 #define RUNS 1000

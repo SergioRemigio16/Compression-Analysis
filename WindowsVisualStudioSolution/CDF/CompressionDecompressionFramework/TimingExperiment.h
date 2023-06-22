@@ -9,7 +9,7 @@
 #include <numeric>
 #include <cmath>
 #include "Utilities.h"
-#include "CompressionDecompression.h"
+#include "ZFPAlgorithms.h"
 
 #define RUNS 1000
 #define WARMUP_RUNS 100

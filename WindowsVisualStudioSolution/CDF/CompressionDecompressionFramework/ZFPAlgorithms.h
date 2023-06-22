@@ -1,5 +1,5 @@
-#ifndef _COMPRESSIONDECOMPRESSION_H_
-#define _COMPRESSIONDECOMPRESSION_H_
+#ifndef _ZFPALGORITHMS_H_
+#define _ZFPALGORITHMS_H_
 
 #include <zfp.h>
 #include <vector>
@@ -36,4 +36,4 @@ double* decompressMatrixAccuracy(CompressionResult& result);
 CompressionResultFFT compressMatrixFFT(double*& originalMatrix, int x, int y, int z, int compressSize);
 double* decompressMatrixFFT(const CompressionResultFFT& compressionResult);
 
-#endif // _COMPRESSIONDECOMPRESSION_H_
+#endif // _ZFPALGORITHMS_H_   
