@@ -1,11 +1,4 @@
 #include "Utilities.h"
-#include <cmath>
-#include <chrono>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-
-
 
 // This macro calculates the index for a 3D point in a 1D array. It works by treating the 1D array as a 3D array,
 // with each (i, j, k) triplet corresponding to a unique index in the 1D array.
@@ -71,18 +64,6 @@ void Utilities::writeWaveToCSV(double* matrix, int x, int y, int z, const std::s
     file.close();
 }
 
-/*
-double* Utilities::createMatrixWave(int x, int y, int z, double frequency, double amplitude, double phase) {
-    double* matrix = new double[x * y * z];
-    for (int i = 0; i < x * y * z; i++) {
-        double waveValue = amplitude * sin(frequency * i + phase);
-        matrix[i] = waveValue;
-    }
-    return matrix;
-}
-*/
-
-
 double* Utilities::createMatrixRandom(int x, int y, int z, double minVal, double maxVal) {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -126,7 +107,8 @@ double Utilities::calculateMSE(const double* originalData, const double* decompr
 }
 
 
-void printComparison(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z, double epsilon = 1e-9) {
+void Utilities::printComparison(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z) {
+    double epsilon = 1e-9;
     std::cout << std::fixed << std::setprecision(15);  // for consistent number of decimal places
     int width = 20;  // 6 decimal digits, 1 dot, 1 sign and up to 4 whole part digits
 
