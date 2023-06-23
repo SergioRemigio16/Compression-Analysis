@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 
 
@@ -52,6 +53,9 @@ double* Utilities::createMatrixWave(int x, int y, int z, double frequency, doubl
     return matrix;
 }
 
+
+
+
 void Utilities::writeWaveToCSV(double* matrix, int x, int y, int z, const std::string& filename) {
     std::ofstream file;
     file.open(filename);
@@ -99,17 +103,18 @@ double Utilities::measureTimingOverhead() {
 }
 
 void Utilities::printMatrix(const double* matrix, int x, int y, int z) {
-    for (int i = 0; i < z; i++) {
-        std::cout << "z = " << i << ":\n";
-        for (int j = 0; j < y; j++) {
-            for (int k = 0; k < x; k++) {
-                std::cout << matrix[i * x * y + j * x + k] << " ";
+    for (int k = 0; k < z; k++) {
+        std::cout << "z = " << k << ":\n";
+        for (int i = 0; i < x; i++) {
+            for (int j = 0; j < y; j++) {
+                std::cout << " " << matrix[IDX(i, j, k)];
             }
             std::cout << "\n";
         }
         std::cout << "\n";
     }
 }
+
 
 double Utilities::calculateMSE(const double* originalData, const double* decompressedData, int size) {
     double sum = 0.0;
@@ -118,4 +123,34 @@ double Utilities::calculateMSE(const double* originalData, const double* decompr
         sum += diff * diff;
     }
     return sum / size;
+}
+
+
+void printComparison(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z, double epsilon = 1e-9) {
+    std::cout << std::fixed << std::setprecision(15);  // for consistent number of decimal places
+    int width = 20;  // 6 decimal digits, 1 dot, 1 sign and up to 4 whole part digits
+
+    for (int k = 0; k < z; k++) {
+        std::cout << "z = " << k << ":\n";
+        for (int i = 0; i < x; i++) {
+            for (int j = 0; j < y; j++) {
+                double original = originalMatrix[IDX(i, j, k)];
+                double decompressed = decompressedMatrix[IDX(i, j, k)];
+
+                std::cout << "[";
+                std::cout << std::setw(width) << original << ",\n ";
+                std::cout << std::setw(width) << decompressed;
+
+                // Check if the numbers differ significantly
+                if (std::abs(original - decompressed) > epsilon) {
+                    std::cout << "*]\n";
+                }
+                else {
+                    std::cout << "]\n";
+                }
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\n";
+    }
 }
