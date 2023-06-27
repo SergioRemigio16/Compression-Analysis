@@ -19,12 +19,6 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-// Calculate size of a double vector
-size_t calculateSize(size_t size);
-
-// Calculate size of a compression result
-size_t calculateSize(const ZFPAlgorithms::CompressionResult& compressionResult);
-
 // Run experiment for different compression rates
 void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int rate);
 

@@ -12,7 +12,6 @@
 #include <vector>
 #include <numeric>
 #include <cmath>
-#include "Utilities.h"
 
 namespace ZFPAlgorithms {
 
@@ -44,6 +43,13 @@ namespace ZFPAlgorithms {
 
     CompressionResultFFT compressMatrixFFT(const double*& originalMatrix, int x, int y, int z, int compressSize);
     double* decompressMatrixFFT(const CompressionResultFFT& compressionResult);
+
+    /// <summary>
+	/// Calculate byte size of compression result
+	/// </summary>
+	/// <param name="compressionResult"></param>
+	/// <returns></returns>
+	size_t calculateDecompressedDataBytes(const ZFPAlgorithms::CompressionResult& compressionResult);
 }
 
 #endif // _ZFPALGORITHMS_H_ 

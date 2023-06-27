@@ -186,3 +186,10 @@ double* ZFPAlgorithms::decompressMatrixFFT(const ZFPAlgorithms::CompressionResul
 
 	return decompressedMatrix;
 }
+
+size_t ZFPAlgorithms::calculateDecompressedDataBytes(const ZFPAlgorithms::CompressionResult& compressionResult) {
+    return sizeof(compressionResult.x) + sizeof(compressionResult.y) + sizeof(compressionResult.z) +
+        compressionResult.buffer.size() * sizeof(unsigned char) + sizeof(compressionResult.bufsize) +
+        sizeof(compressionResult.rate);
+}
+

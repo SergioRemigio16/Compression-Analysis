@@ -3,13 +3,6 @@
 #define RUNS 1000
 #define WARMUP_RUNS 100
 
-
-size_t calculateSize(const ZFPAlgorithms::CompressionResult& compressionResult) {
-    return sizeof(compressionResult.x) + sizeof(compressionResult.y) + sizeof(compressionResult.z) +
-        compressionResult.buffer.size() * sizeof(unsigned char) + sizeof(compressionResult.bufsize) +
-        sizeof(compressionResult.rate);
-}
-
 void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int rate) {
     int size = x * y * z;
     double timingOverhead = Utilities::measureTimingOverhead();
@@ -51,9 +44,9 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int ra
             compressTimes.push_back(compressTime.count() - timingOverhead);
             decompressTimes.push_back(decompressTime.count() - timingOverhead);
             mseValues.push_back(Utilities::calculateMSE(originalMatrix, decompressedMatrix, size));
-            originalSizes.push_back(calculateSize(size));
+            originalSizes.push_back(Utilities::calculateOriginalDataBytes(size));
             compressedSizes.push_back(compressionResult.bufsize);
-            totalCompressedSizes.push_back(calculateSize(compressionResult));
+            totalCompressedSizes.push_back(ZFPAlgorithms::calculateDecompressedDataBytes(compressionResult));
         }
 
         if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {

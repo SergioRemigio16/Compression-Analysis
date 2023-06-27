@@ -35,10 +35,10 @@ namespace SVDAlgorithms {
 	// This function prints the memory sizes of U, V, S and the total size.
 	// U, V: singular vectors
 	// S: singular values
-	void printByteSize(const SVDResult& compressedData);
+	void printByteSizeReport(const SVDResult& compressedData);
 
 	// This function reports the byte size of the compressed data.
-	void printByteSizeReport();
+	void calculateDecompressedDataBytes(const SVDAlgorithms::SVDResult& compressedData);
 }
 
 #endif // _SVDALGORITHMS_H_
