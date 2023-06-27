@@ -1,3 +1,13 @@
+
+/**
+ * @file SVDAlgorithms.h
+ * @brief This header file provides SVD-based data compression and decompression algorithms.
+ *
+ * No padding. 
+ * This file contains methods and types to perform SVD-based compression and decompression,
+ * byte size reporting for the compressed data, and calculation of decompressed data bytes.
+ */
+
 #ifndef _SVDALGORITHMS_H_
 #define _SVDALGORITHMS_H_
 
@@ -8,8 +18,14 @@
 
 // This namespace encapsulates all methods and types for SVD-based compression.
 namespace SVDAlgorithms {
-	// This struct stores the result of SVD.
-	// U, V are matrices, S is a vector, and x, y, z are the dimensions of the original matrix.
+	
+	/**
+	 * @struct SVDResult
+	 * @brief This structure stores the result of SVD.
+	 *
+	 * The result includes left singular vectors (U), right singular vectors (V),
+	 * singular values (S), and the dimensions of the original matrix (x, y, z).
+	 */
 	struct SVDResult {
 		Eigen::MatrixXd U; // Left singular vectors
 		Eigen::MatrixXd V; // Right singular vectors
@@ -19,26 +35,42 @@ namespace SVDAlgorithms {
 		int z; 
 	};
 
-	// This function compresses the original matrix using SVD and returns the compressed version.
-	// originalMatrix: pointer to the original matrix
-	// x, y, z: dimensions of the original matrix
-	// k: the desired number of singular values to retain in the compressed matrix
-	//    A smaller k will result in higher compression but less accuracy in the reconstructed data.
-	//    k should be less than or equal to min(x*y, z)
+	/**
+	 * @brief Compresses the original matrix using SVD and returns the compressed version.
+	 *
+	 * @param originalMatrix Pointer to the original matrix.
+	 * @param x X-dimension of the original matrix.
+	 * @param y Y-dimension of the original matrix.
+	 * @param z Z-dimension of the original matrix.
+	 * @param k The desired number of singular values to retain in the compressed matrix.
+	 * @return The compressed matrix as SVDResult.
+	 */
 	SVDResult compressMatrix(double*& originalMatrix, const int x, const int y, const int z, const int k);
 
-	// This function decompresses the compressed data back into the original form.
-	// compressedData: the compressed data from compressMatrix()
-	// x, y, z: dimensions of the original matrix
+	/**
+	 * @brief Decompresses the compressed data back into the original form.
+	 *
+	 * @param compressedData The compressed data from compressMatrix().
+	 * @param x X-dimension of the original matrix.
+	 * @param y Y-dimension of the original matrix.
+	 * @param z Z-dimension of the original matrix.
+	 * @return A pointer to the decompressed data.
+	 */
 	double* decompressMatrix(const SVDResult& compressedData, const int x, const int y, const int z);
 
-	// This function prints the memory sizes of U, V, S and the total size.
-	// U, V: singular vectors
-	// S: singular values
+	/**
+	 * @brief Prints the memory sizes of U, V, S and the total size.
+	 *
+	 * @param compressedData The compressed data from compressMatrix().
+	 */
 	void printByteSizeReport(const SVDResult& compressedData);
 
-	// This function reports the byte size of the compressed data.
-	void calculateDecompressedDataBytes(const SVDAlgorithms::SVDResult& compressedData);
+	/**
+	 * @brief Calculates the byte size of the compressed data.
+	 *
+	 * @param compressedData The compressed data from compressMatrix().
+	 */
+	size_t calculateCompressedDataBytes(const SVDAlgorithms::SVDResult& compressedData);
 }
 
 #endif // _SVDALGORITHMS_H_

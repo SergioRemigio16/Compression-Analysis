@@ -43,6 +43,7 @@ double* SVDAlgorithms::decompressMatrix(const SVDAlgorithms::SVDResult& compress
     }
     return decompressedMatrixData;
 }
+
 void SVDAlgorithms::printByteSizeReport(const SVDAlgorithms::SVDResult& compressedData) {
     // Compute size assuming no padding
     size_t sizeU = compressedData.U.size() * sizeof(double);
@@ -58,6 +59,11 @@ void SVDAlgorithms::printByteSizeReport(const SVDAlgorithms::SVDResult& compress
     std::cout << "EIGEN_MAX_STATIC_ALIGN_BYTES: " << EIGEN_MAX_STATIC_ALIGN_BYTES << std::endl;
 }
 
-void SVDAlgorithms::calculateDecompressedDataBytes(const SVDAlgorithms::SVDResult& compressedData) {
+size_t SVDAlgorithms::calculateCompressedDataBytes(const SVDAlgorithms::SVDResult& compressedData) {
+    // Compute size assuming no padding
+    size_t sizeU = compressedData.U.size() * sizeof(double);
+    size_t sizeV = compressedData.V.size() * sizeof(double);
+    size_t sizeS = compressedData.S.size() * sizeof(double);
 
+    return sizeU + sizeV + sizeS;
 }
