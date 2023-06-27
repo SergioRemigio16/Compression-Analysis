@@ -1,15 +1,6 @@
-#include <iostream>
-#include <chrono>
-#include <complex>
-#include <zfp.h>
-#include <fftw3.h>
-#include <vector>
-#include <numeric>
-#include <cmath>
-#include "Utilities.h"
 #include "ZFPAlgorithms.h"
 
-CompressionResult compressMatrixFixedRate(double*& originalData, int x, int y, int z, uint rate) {
+ZFPAlgorithms::CompressionResult ZFPAlgorithms::compressMatrixFixedRate(double*& originalData, int x, int y, int z, uint rate) {
 	zfp_field* field = zfp_field_3d(originalData, zfp_type_double, x, y, z);
 	zfp_stream* zfp = zfp_stream_open(NULL);
 
@@ -24,7 +15,7 @@ CompressionResult compressMatrixFixedRate(double*& originalData, int x, int y, i
 	zfp_stream_close(zfp);
 	zfp_field_free(field);
 
-	CompressionResult result;
+	ZFPAlgorithms::CompressionResult result;
 	result.x = x;
 	result.y = y;
 	result.z = z;
@@ -35,7 +26,7 @@ CompressionResult compressMatrixFixedRate(double*& originalData, int x, int y, i
 	return result;
 }
 
-double* decompressMatrixFixedRate(CompressionResult& result) {
+double* ZFPAlgorithms::decompressMatrixFixedRate(ZFPAlgorithms::CompressionResult& result) {
 	zfp_stream* zfp = zfp_stream_open(NULL);
 
 	// Set the decompression rate instead of accuracy
@@ -53,7 +44,7 @@ double* decompressMatrixFixedRate(CompressionResult& result) {
 
 
 
-CompressionResult compressMatrixAccuracy(double*& originalData, int x, int y, int z, double precision) {
+ZFPAlgorithms::CompressionResult ZFPAlgorithms::compressMatrixAccuracy(double*& originalData, int x, int y, int z, double precision) {
 	// Creates a new ZFP field in 3D that will be compressed. The field takes the raw data from 'originalData',
 	// specifies that the data type is double, and provides the dimensions of the 3D field (x, y, z).
 	zfp_field* field = zfp_field_3d(originalData, zfp_type_double, x, y, z);
@@ -105,7 +96,7 @@ CompressionResult compressMatrixAccuracy(double*& originalData, int x, int y, in
 
 
 
-double* decompressMatrixAccuracy(CompressionResult& result) {
+double* ZFPAlgorithms::decompressMatrixAccuracy(ZFPAlgorithms::CompressionResult& result) {
 	zfp_stream* zfp = zfp_stream_open(NULL);
 	zfp_stream_set_accuracy(zfp, result.precision);
 	// Creates a bitstream that will be used to hold the compressed data.
@@ -128,8 +119,8 @@ double* decompressMatrixAccuracy(CompressionResult& result) {
 
 
 // Compress the input data using FFT and keep the COMPRESS_SIZE strongest frequencies.
-CompressionResultFFT compressMatrixFFT(const double*& originalMatrix, int x, int y, int z, int compressSize) {
-	CompressionResultFFT result;
+ZFPAlgorithms::CompressionResultFFT ZFPAlgorithms::compressMatrixFFT(const double*& originalMatrix, int x, int y, int z, int compressSize) {
+	ZFPAlgorithms::CompressionResultFFT result;
 	result.x = x;
 	result.y = y;
 	result.z = z;
@@ -163,7 +154,7 @@ CompressionResultFFT compressMatrixFFT(const double*& originalMatrix, int x, int
 }
 
 // Decompress the data using inverse FFT.
-double* decompressMatrixFFT(const CompressionResultFFT& compressionResult) {
+double* ZFPAlgorithms::decompressMatrixFFT(const ZFPAlgorithms::CompressionResultFFT& compressionResult) {
 	int size = compressionResult.x * compressionResult.y * compressionResult.z;
 
 	// Prepare the input data for inverse FFT.

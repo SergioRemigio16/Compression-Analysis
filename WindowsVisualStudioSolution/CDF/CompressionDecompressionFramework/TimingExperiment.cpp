@@ -1,22 +1,10 @@
-#include <fstream>
-#include <iostream>
-#include <chrono>
-#include <zfp.h>
-#include <numeric>
-#include <cmath>
-#include <vector>
-#include "Utilities.h"
-#include "ZFPAlgorithms.h"
 #include "TimingExperiment.h"
 
 #define RUNS 1000
 #define WARMUP_RUNS 100
 
-size_t calculateSize(size_t size) {
-    return size * sizeof(double);
-}
 
-size_t calculateSize(const CompressionResult& compressionResult) {
+size_t calculateSize(const ZFPAlgorithms::CompressionResult& compressionResult) {
     return sizeof(compressionResult.x) + sizeof(compressionResult.y) + sizeof(compressionResult.z) +
         compressionResult.buffer.size() * sizeof(unsigned char) + sizeof(compressionResult.bufsize) +
         sizeof(compressionResult.rate);
@@ -50,12 +38,12 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int ra
         }
 
         auto start = std::chrono::high_resolution_clock::now();
-        CompressionResult compressionResult = compressMatrixFixedRate(originalMatrix, x, y, z, rate);
+        ZFPAlgorithms::CompressionResult compressionResult = ZFPAlgorithms::compressMatrixFixedRate(originalMatrix, x, y, z, rate);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> compressTime = end - start;
 
         start = std::chrono::high_resolution_clock::now();
-        double* decompressedMatrix = decompressMatrixFixedRate(compressionResult);
+        double* decompressedMatrix = ZFPAlgorithms::decompressMatrixFixedRate(compressionResult);
         end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> decompressTime = end - start;
 
@@ -99,7 +87,7 @@ int runTimingExperiment() {
     int maxRate = 64;
 
     std::cout << "Rate, Matrix Size, Mean Compression Time (s), Mean Decompression Time (s), Mean Loss (MSE), Mean Original Size (bytes), Mean Compressed Size (bytes), Mean Total Compressed Size (bytes) - Random Distribution" << std::endl;
-    //runExperimentsForRates(3, 7, 7, true, false, minRate, maxRate);
+    runExperimentsForRates(3, 7, 7, true, false, minRate, maxRate);
 
     int x = 3;
     int y = 3;

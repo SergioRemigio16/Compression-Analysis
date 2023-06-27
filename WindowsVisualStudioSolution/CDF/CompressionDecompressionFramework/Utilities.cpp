@@ -106,6 +106,10 @@ double Utilities::calculateMSE(const double* originalData, const double* decompr
     return sum / size;
 }
 
+size_t calculateOriginalDataBytes(int size) {
+    return size * sizeof(double);
+}
+
 
 void Utilities::printComparison(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z) {
     double epsilon = 1e-9;

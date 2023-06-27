@@ -11,6 +11,8 @@
 #include "Utilities.h"
 #include "ZFPAlgorithms.h"
 
+
+
 #define RUNS 1000
 #define WARMUP_RUNS 100
 #ifndef M_PI
@@ -21,7 +23,7 @@
 size_t calculateSize(size_t size);
 
 // Calculate size of a compression result
-size_t calculateSize(const CompressionResult& compressionResult);
+size_t calculateSize(const ZFPAlgorithms::CompressionResult& compressionResult);
 
 // Run experiment for different compression rates
 void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int rate);
