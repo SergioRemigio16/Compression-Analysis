@@ -1,16 +1,16 @@
 #include "TimingExperiment.h"
+#include "SVDAlgorithms.h"
 
+#define EIGEN_DONT_ALIGN
+#include <Eigen/Dense> 
 #include <iostream>
-#include <vector>
 #include <cmath>
-#include <complex>
 #include <fftw3.h>
 #include <algorithm>
-#include <cstring>  // Added for std::memcpy
+#include <cstring>  
 
-// Function to print various types of error between original and decompressed matrices
-void printError(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z) {
-    // Computing and printing Mean Squared Error, Mean Absolute Error,
+void printError2(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z) {
+	// Computing and printing Mean Squared Error, Mean Absolute Error,
     // Maximum Absolute Error, Root Mean Squared Error and Peak Signal to Noise Ratio.
     double mse = 0;
     for (size_t i = 0; i < x * y * z; ++i) {
@@ -45,132 +45,155 @@ void printError(const double* originalMatrix, const double* decompressedMatrix, 
     double maxOriginalValue = *std::max_element(originalMatrix, originalMatrix + (x * y * z));
     double psnr = 20 * log10(maxOriginalValue / rmse);
     std::cout << "Peak Signal to Noise Ratio (in dB): " << psnr << "\n";
+
+}
+
+void serializeInt(std::vector<unsigned char>& byteStream, int value) {
+    // Write the integer to the byte stream
+    const unsigned char* start = reinterpret_cast<unsigned char*>(&value);
+    const unsigned char* end = start + sizeof(int);
+    byteStream.insert(byteStream.end(), start, end);
+}
+
+int deserializeInt(std::vector<unsigned char>& byteStream) {
+    // Read the integer from the byte stream
+    int value;
+    std::copy(byteStream.begin(), byteStream.begin() + sizeof(int), reinterpret_cast<unsigned char*>(&value));
+
+    // Erase the used data from the byteStream
+    byteStream.erase(byteStream.begin(), byteStream.begin() + sizeof(int));
+
+    return value;
 }
 
 
+void serializeMatrix(std::vector<unsigned char>& byteStream, const Eigen::MatrixXd& matrix) {
 
-typedef std::vector<std::complex<double>> ComplexVec;
-typedef std::pair<double, size_t> MagnitudeIndexPair;
+    // First write the size of the matrix
+    serializeInt(byteStream, matrix.rows());
+    serializeInt(byteStream, matrix.cols());
 
-// Structure to hold a complex value and its index
-struct FrequencyComponent {
-    std::complex<double> value;
-    size_t index;
-};
-
-// Function to serialize the compressed data to an unsigned char buffer for sending via MPI
-unsigned char* serializeCompressedData(const std::vector<FrequencyComponent>& compressedData, size_t& size) {
-    // Calculating the size of the data in bytes
-    size = sizeof(FrequencyComponent) * compressedData.size();
-    // Allocating an unsigned char buffer of sufficient size
-    unsigned char* buffer = new unsigned char[size];
-    // Copying the data from the vector to the buffer
-    std::memcpy(buffer, compressedData.data(), size);
-    // Returning the buffer
-    return buffer;
+    // Then write the data
+    const unsigned char* dataStart = reinterpret_cast<const unsigned char*>(matrix.data());
+    const unsigned char* dataEnd = dataStart + sizeof(double) * matrix.size();
+    byteStream.insert(byteStream.end(), dataStart, dataEnd);
 }
 
-// Function to deserialize the compressed data from an unsigned char buffer after receiving via MPI
-std::vector<FrequencyComponent> deserializeCompressedData(const unsigned char* buffer, size_t size) {
-    // Calculating the number of elements in the buffer
-    std::vector<FrequencyComponent> compressedData(size / sizeof(FrequencyComponent));
-    // Copying the data from the buffer to the vector
-    std::memcpy(compressedData.data(), buffer, size);
-    // Returning the vector
-    return compressedData;
+Eigen::MatrixXd deserializeMatrix(std::vector<unsigned char>& byteStream) {
+    // First read the size of the matrix
+    int rows = deserializeInt(byteStream);
+    int cols = deserializeInt(byteStream);
+
+    // Then read the data
+    Eigen::MatrixXd matrix(rows, cols);
+    std::copy(byteStream.begin(), byteStream.begin() + sizeof(double) * matrix.size(), reinterpret_cast<unsigned char*>(matrix.data()));
+
+    // Erase the used data from the byteStream
+    byteStream.erase(byteStream.begin(), byteStream.begin() + sizeof(double) * matrix.size());
+
+    return matrix;
 }
 
-// Function to compare magnitudes for sorting
-bool compareMagnitude(const MagnitudeIndexPair& a, const MagnitudeIndexPair& b) {
-    return a.first < b.first;
-}
 
-double* decompressData(const std::vector<FrequencyComponent>& compressedData, size_t x, size_t y, size_t z) {
-    // Initialize complexMatrix with zeros
-    ComplexVec complexMatrix(x * y * z, 0.0);
+unsigned char* compressMatrix(double*& originalMatrix, const int x, const int y, const int z, const int k, size_t& size) {
+    // Convert to Eigen's VectorXd for easier manipulation
+    Eigen::VectorXd eigenMatrix = Eigen::Map<Eigen::VectorXd>(originalMatrix, x * y * z);
 
-    // Fill in the significant frequency components from compressedData
-    for (const auto& component : compressedData) {
-        complexMatrix[component.index] = component.value;
+    // Reshape your originalMatrix into a 2D matrix
+    Eigen::MatrixXd dataMatrix(x * y, z);
+    for (int i = 0; i < x * y; i++) {
+        for (int j = 0; j < z; j++) {
+            dataMatrix(i, j) = eigenMatrix[i * z + j];
+        }
     }
 
-    // Perform inverse FFT
-    double* decompressedMatrix = new double[x * y * z];
-    fftw_plan q = fftw_plan_dft_c2r_3d(x, y, z, reinterpret_cast<fftw_complex*>(complexMatrix.data()),
-        decompressedMatrix, FFTW_ESTIMATE);
-    fftw_execute(q);
-    fftw_destroy_plan(q);
+    // Perform SVD
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(dataMatrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
-    // FFTW's backwards transform does not normalize the result, so we have to do it manually
-    for (size_t i = 0; i < x * y * z; ++i) {
-        decompressedMatrix[i] /= (x * y * z);
-    }
+    // Now we will get the first k columns of U and V, and the first k singular values
+    Eigen::MatrixXd U = svd.matrixU().leftCols(k);
+    Eigen::MatrixXd V = svd.matrixV().leftCols(k);
+    Eigen::VectorXd S = svd.singularValues().head(k);
 
-    return decompressedMatrix;
+    // Serialize the matrices and metadata into a byte stream
+    std::vector<unsigned char> byteStream;
+    serializeMatrix(byteStream, U);
+    serializeMatrix(byteStream, V);
+    serializeMatrix(byteStream, S);
+    serializeInt(byteStream, x);
+    serializeInt(byteStream, y);
+    serializeInt(byteStream, z);
+
+    // Save the size of the byteStream
+    size = byteStream.size();
+
+    // Convert the vector to a raw pointer
+    unsigned char* rawBytes = new unsigned char[size];
+    std::copy(byteStream.begin(), byteStream.end(), rawBytes);
+
+    return rawBytes;
 }
 
-std::vector<FrequencyComponent> compressData( double* originalMatrix, size_t x, size_t y, size_t z, double compressionRatio) {
-    // Performing FFT on the original matrix
-    ComplexVec complexMatrix(x * y * z);
-    fftw_plan p = fftw_plan_dft_r2c_3d(x, y, z, originalMatrix,
-        reinterpret_cast<fftw_complex*>(complexMatrix.data()), FFTW_ESTIMATE);
-    fftw_execute(p);
-    fftw_destroy_plan(p);
+double* decompressMatrix(unsigned char*& compressedData, size_t size) {
+    // Initialize byte stream with data from the raw pointer
+    std::vector<unsigned char> byteStream(compressedData, compressedData + size);
 
-    // Get magnitudes and corresponding indices
-    std::vector<MagnitudeIndexPair> magnitudes;
-    for (size_t i = 0; i < x * y * z; ++i) {
-        magnitudes.push_back(MagnitudeIndexPair(std::abs(complexMatrix[i]), i));
+    // Deserialize the matrices and metadata
+    Eigen::MatrixXd U = deserializeMatrix(byteStream);
+    Eigen::MatrixXd V = deserializeMatrix(byteStream);
+    Eigen::MatrixXd S = deserializeMatrix(byteStream);
+    int x = deserializeInt(byteStream);
+    int y = deserializeInt(byteStream);
+    int z = deserializeInt(byteStream);
+
+    // Perform matrix multiplication to decompress the data
+    Eigen::MatrixXd decompressedMatrix = U * S.asDiagonal() * V.transpose();
+
+    // Reshape and convert the decompressed matrix to a raw pointer
+    double* decompressedData = new double[x * y * z];
+    for (int i = 0; i < x * y; i++) {
+        for (int j = 0; j < z; j++) {
+            decompressedData[i * z + j] = decompressedMatrix(i, j);
+        }
     }
 
-    // Sort the magnitudes
-    std::sort(magnitudes.begin(), magnitudes.end(), compareMagnitude);
+    return decompressedData;
+}
 
-    // Store only the significant frequency components in compressedData
-    size_t significantSize = static_cast<size_t>((1.0 - compressionRatio) * x * y * z);
-    std::vector<FrequencyComponent> compressedData;
-    for (size_t i = x * y * z - significantSize; i < x * y * z; ++i) {
-        compressedData.push_back({ complexMatrix[magnitudes[i].second], magnitudes[i].second });
-    }
-
-    return compressedData;
+// A function to calculate the size of a matrix in bytes.
+size_t matrixSizeInBytes(int rows, int cols) {
+    return sizeof(double) * rows * cols;
 }
 
 int main() {
     size_t x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
-    double compressionRatio = 0.6; // Compression ratio. 0.5 means keeping half of the frequency components.
+    int k = std::min(y, z) / 2;
 
     // Define original matrix
     double* originalMatrix = Utilities::createMatrixWave(x, y, z, 1, 3.1415, 0, 1.0, 1.0, 7);
+    size_t originalMatrixBytes = matrixSizeInBytes(x * y, z);
 
-    // Compressing the data
-    std::vector<FrequencyComponent> compressedData = compressData(originalMatrix, x, y, z, compressionRatio);
+    std::cout << "Original matrix size: " << originalMatrixBytes << " bytes" << std::endl;
 
-    // Serializing the compressed data for sending via MPI
-    size_t serializedSize;
-    unsigned char* serializedCompressedData = serializeCompressedData(compressedData, serializedSize);
+    // Compress the matrix
+    size_t compressedSize;
+    unsigned char* compressedMatrix = compressMatrix(originalMatrix, x, y, z, k, compressedSize);
+    size_t compressedMatrixBytes = matrixSizeInBytes(k, z) * 2 + matrixSizeInBytes(k, k) + 4 * sizeof(int); // U, V, S, and 4 integers (x, y, z, k)
 
-    // Receiving the serialized data via MPI and deserializing it
-    // Note: In this code, we simply reuse the serialized data for demonstration purposes. In a real application,
-    // the data would be sent and received via MPI.
-    std::vector<FrequencyComponent> receivedCompressedData = deserializeCompressedData(serializedCompressedData, serializedSize);
+    std::cout << "Compressed matrix size: " << compressedMatrixBytes << " bytes" << std::endl;
 
-    // Decompressing the received data
-    double* decompressedMatrix = decompressData(receivedCompressedData, x, y, z);
+    // Decompress the matrix
+    double* decompressedMatrix = decompressMatrix(compressedMatrix, compressedSize);
 
-    // Printing comparison of original and decompressed data
+	// Printing comparison of original and decompressed data
     Utilities::printComparison(originalMatrix, decompressedMatrix, x, y, z);
 
-    // Printing size of original and serialized compressed data
-    std::cout << "Size of original matrix (bytes): " << (x * y * z) * sizeof(double) << "\n";
-    std::cout << "Size of serialized compressed data (bytes): " << serializedSize << "\n";
-
     // Printing various types of error between original and decompressed data
-    printError(originalMatrix, decompressedMatrix, x, y, z);
+    printError2(originalMatrix, decompressedMatrix, x, y, z);
 
     // Freeing the memory
-    delete[] serializedCompressedData;
     delete[] originalMatrix;
+    delete[] compressedMatrix;
     delete[] decompressedMatrix;
 
     return 0;
