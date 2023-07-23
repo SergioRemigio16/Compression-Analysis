@@ -53,11 +53,11 @@ int main() {
 
 
 
-bool compareMagnitude(const MagnitudeIndexPair& a, const MagnitudeIndexPair& b) {
+bool FFTAlgorithms::compareMagnitude(const MagnitudeIndexPair& a, const MagnitudeIndexPair& b) {
     return a.first < b.first;
 }
 
-unsigned char* serializeCompressedData(const std::vector<FrequencyComponent>& compressedData, size_t& size) {
+unsigned char* FFTAlgorithms::serializeCompressedData(const std::vector<FrequencyComponent>& compressedData, size_t& size) {
 	// Calculating the size of the data in bytes
     size = sizeof(FrequencyComponent) * compressedData.size();
     // Allocating an unsigned char buffer of sufficient size
@@ -68,18 +68,18 @@ unsigned char* serializeCompressedData(const std::vector<FrequencyComponent>& co
     return buffer;
 }
 
-std::vector<FrequencyComponent> deserializeCompressedData(const unsigned char* buffer, size_t size) {
+std::vector<FFTAlgorithms::FrequencyComponent> FFTAlgorithms::deserializeCompressedData(const unsigned char* buffer, size_t size) {
     // Calculating the number of elements in the buffer
-    std::vector<FrequencyComponent> compressedData(size / sizeof(FrequencyComponent));
+    std::vector<FFTAlgorithms::FrequencyComponent> compressedData(size / sizeof(FFTAlgorithms::FrequencyComponent));
     // Copying the data from the buffer to the vector
     std::memcpy(compressedData.data(), buffer, size);
     // Returning the vector
     return compressedData;
 }
 
-double* decompressData(const std::vector<FrequencyComponent>& compressedData, size_t x, size_t y, size_t z) {
+double* FFTAlgorithms::decompressData(const std::vector < FFTAlgorithms::FrequencyComponent > & compressedData, size_t x, size_t y, size_t z) {
     // Initialize complexMatrix with zeros
-    ComplexVec complexMatrix(x * y * z, 0.0);
+    FFTAlgorithms::ComplexVec complexMatrix(x * y * z, 0.0);
 
     // Fill in the significant frequency components from compressedData
     for (const auto& component : compressedData) {
@@ -102,7 +102,7 @@ double* decompressData(const std::vector<FrequencyComponent>& compressedData, si
 
 }
 
-std::vector<FrequencyComponent> compressData(double* originalMatrix, size_t x, size_t y, size_t z, double compressionRatio) {
+std::vector<FFTAlgorithms::FrequencyComponent> FFTAlgorithms::compressData(double* originalMatrix, size_t x, size_t y, size_t z, double compressionRatio) {
     // Performing FFT on the original matrix
     ComplexVec complexMatrix(x * y * z);
     fftw_plan p = fftw_plan_dft_r2c_3d(x, y, z, originalMatrix,
