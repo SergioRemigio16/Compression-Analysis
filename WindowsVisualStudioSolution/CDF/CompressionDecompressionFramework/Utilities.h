@@ -34,6 +34,7 @@ namespace Utilities {
 	void printMatrix(const double* matrix, int x, int y, int z);
 	double calculateMSE(const double* originalData, const double* decompressedData, int size);
 	void printComparison(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z);
+	void printError(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z);
     /// <summary>
 	/// Calculate byte size of 
 	/// </summary>

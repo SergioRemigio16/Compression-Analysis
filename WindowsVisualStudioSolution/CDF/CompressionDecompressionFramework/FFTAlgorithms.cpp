@@ -51,44 +51,7 @@ int main() {
 */
 
 
-void printError(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z) {
-	// Computing and printing Mean Squared Error, Mean Absolute Error,
-    // Maximum Absolute Error, Root Mean Squared Error and Peak Signal to Noise Ratio.
-    double mse = 0;
-    for (size_t i = 0; i < x * y * z; ++i) {
-        double error = originalMatrix[i] - decompressedMatrix[i];
-        mse += error * error;
-    }
-    mse /= (x * y * z);
 
-    std::cout << "Mean Squared Error: " << mse << "\n";
-    // Compute and print Mean Absolute Error
-    double mae = 0;
-    for (size_t i = 0; i < x * y * z; ++i) {
-        double error = std::abs(originalMatrix[i] - decompressedMatrix[i]);
-        mae += error;
-    }
-    mae /= (x * y * z);
-    std::cout << "Mean Absolute Error: " << mae << "\n";
-
-    // Compute and print Maximum Absolute Error
-    double maxError = 0;
-    for (size_t i = 0; i < x * y * z; ++i) {
-        double error = std::abs(originalMatrix[i] - decompressedMatrix[i]);
-        maxError = std::max(maxError, error);
-    }
-    std::cout << "Max Absolute Error: " << maxError << "\n";
-
-    // Compute and print Root Mean Squared Error
-    double rmse = sqrt(mse);
-    std::cout << "Root Mean Squared Error: " << rmse << "\n";
-
-    // Compute and print Peak Signal to Noise Ratio (PSNR)
-    double maxOriginalValue = *std::max_element(originalMatrix, originalMatrix + (x * y * z));
-    double psnr = 20 * log10(maxOriginalValue / rmse);
-    std::cout << "Peak Signal to Noise Ratio (in dB): " << psnr << "\n";
-
-}
 
 bool compareMagnitude(const MagnitudeIndexPair& a, const MagnitudeIndexPair& b) {
     return a.first < b.first;
