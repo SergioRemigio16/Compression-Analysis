@@ -87,8 +87,8 @@ unsigned char* SVDAlgorithms::compressMatrix(double*& originalMatrix, const int 
     return byteStream;
 }
 
-double* SVDAlgorithms::decompressMatrix(unsigned char*& compressedData, int size) {
-    unsigned char* ptr = compressedData;
+double* SVDAlgorithms::decompressMatrix(unsigned char*& byteStream, int size) {
+    unsigned char* ptr = byteStream;
 
     // Deserialize the metadata
     int x, y, z;

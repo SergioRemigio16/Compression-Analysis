@@ -1,44 +1,42 @@
 #include "TimingExperiment.h"
 #include "FFTAlgorithms.h"
 
+#include <vector>
+#include <complex>
+#include <iostream>
+#include <cmath>
+#include <fftw3.h>
+#include <algorithm>
+#include <cstring>  
 
 int main() {
-    size_t x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
-    double compressionRatio = 0.6; // Compression ratio. 0.5 means keeping half of the frequency components.
+    int x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
+    double compressionRatio = 0.56; // Compression ratio. 0.9 means keeping 90% of the orignial data
 
     // Define original matrix
     double* originalMatrix = Utilities::createMatrixWave(x, y, z, 1, 3.1415, 0, 1.0, 1.0, 7);
 
     // Compressing the data
-    std::vector<FFTAlgorithms::FrequencyComponent> compressedData = FFTAlgorithms::compressData(originalMatrix, x, y, z, compressionRatio);
-
-    // Serializing the compressed data for sending via MPI
-
-    size_t serializedSize;
-    unsigned char* serializedCompressedData = serializeCompressedData(compressedData, serializedSize);
-
-    // Receiving the serialized data via MPI and deserializing it
-    // Note: In this code, we simply reuse the serialized data for demonstration purposes. In a real application,
-    // the data would be sent and received via MPI.
-    std::vector<FFTAlgorithms::FrequencyComponent> receivedCompressedData = FFTAlgorithms::deserializeCompressedData(serializedCompressedData, serializedSize);
+    int byteStreamSize;
+    unsigned char* byteStream = FFTAlgorithms::compressData(originalMatrix, x, y, z, compressionRatio, byteStreamSize);
 
     // Decompressing the received data
-    double* decompressedMatrix = decompressData(receivedCompressedData, x, y, z);
+    double* decompressedMatrix = FFTAlgorithms::decompressData(byteStream, byteStreamSize);
 
     // Printing comparison of original and decompressed data
     Utilities::printComparison(originalMatrix, decompressedMatrix, x, y, z);
 
     // Printing size of original and serialized compressed data
     std::cout << "Size of original matrix (bytes): " << (x * y * z) * sizeof(double) << "\n";
-    std::cout << "Size of serialized compressed data (bytes): " << serializedSize << "\n";
+    std::cout << "Size of serialized compressed data (bytes): " << byteStreamSize << "\n";
 
     // Printing various types of error between original and decompressed data
     Utilities::printError(originalMatrix, decompressedMatrix, x, y, z);
 
     // Freeing the memory
-    delete[] serializedCompressedData;
     delete[] originalMatrix;
     delete[] decompressedMatrix;
+    delete[] byteStream;
 
     return 0;
 }
