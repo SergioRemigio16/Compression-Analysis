@@ -16,7 +16,6 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int ra
     mseValues.reserve(RUNS);
     originalSizes.reserve(RUNS);
     compressedSizes.reserve(RUNS);
-    totalCompressedSizes.reserve(RUNS);
 
     for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
         double* originalMatrix = nullptr;
@@ -31,12 +30,13 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int ra
         }
 
         auto start = std::chrono::high_resolution_clock::now();
-        ZFPAlgorithms::CompressionResult compressionResult = ZFPAlgorithms::compressMatrixFixedRate(originalMatrix, x, y, z, rate);
+        int compressionResultSize;
+        unsigned char* compressionResult = ZFPAlgorithms::compressMatrix(originalMatrix, x, y, z, rate, compressionResultSize);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> compressTime = end - start;
 
         start = std::chrono::high_resolution_clock::now();
-        double* decompressedMatrix = ZFPAlgorithms::decompressMatrixFixedRate(compressionResult);
+        double* decompressedMatrix = ZFPAlgorithms::decompressMatrix(compressionResult, compressionResultSize);
         end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> decompressTime = end - start;
 
@@ -45,8 +45,7 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int ra
             decompressTimes.push_back(decompressTime.count() - timingOverhead);
             mseValues.push_back(Utilities::calculateMSE(originalMatrix, decompressedMatrix, size));
             originalSizes.push_back(Utilities::calculateOriginalDataBytes(size));
-            compressedSizes.push_back(compressionResult.bufsize);
-            totalCompressedSizes.push_back(ZFPAlgorithms::calculateDecompressedDataBytes(compressionResult));
+            compressedSizes.push_back(compressionResultSize);
         }
 
         if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {

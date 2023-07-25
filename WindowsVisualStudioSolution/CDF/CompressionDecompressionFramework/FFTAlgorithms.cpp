@@ -17,7 +17,7 @@ bool FFTAlgorithms::compareMagnitude(const MagnitudeIndexPair& a, const Magnitud
     return a.first < b.first;
 }
 
-unsigned char* FFTAlgorithms::compressData(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size) {
+unsigned char* FFTAlgorithms::compressMatrix(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size) {
     // Performing FFT on the original matrix
     ComplexVec complexMatrix(x * y * z);
     fftw_plan p = fftw_plan_dft_r2c_3d(x, y, z, originalMatrix,
@@ -68,7 +68,7 @@ unsigned char* FFTAlgorithms::compressData(double* originalMatrix, int x, int y,
     return byteStream;
 }
 
-double* FFTAlgorithms::decompressData(unsigned char* byteStream, int byteStreamSize) {
+double* FFTAlgorithms::decompressMatrix(unsigned char* byteStream, int byteStreamSize) {
     // Read x, y, z from the start of the bytestream
     int x, y, z;
     std::memcpy(&x, byteStream, sizeof(int));

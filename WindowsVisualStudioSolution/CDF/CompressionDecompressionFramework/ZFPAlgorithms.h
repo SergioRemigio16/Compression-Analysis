@@ -12,33 +12,12 @@
 
 namespace ZFPAlgorithms {
 
-    struct CompressionResult {
-        int x;
-        int y;
-        int z;
-        /// <summary>
-        /// Holds the compressed data
-        /// </summary>
-        std::vector<unsigned char> buffer;
-        size_t bufsize;
-        double precision;
-        uint rate;
-        CompressionResult() : x(0), y(0), z(0), bufsize(0), rate(0), precision(0.0) {}
-    };
-
-    struct CompressionResultFFT {
-        int x, y, z; // Original dimensions
-        int compressSize; // Number of strongest frequencies we keep
-        std::vector<int> indices; // Indices of the kept frequencies
-        std::vector<std::complex<double>> frequencies; // Complex values of the kept frequencies
-    };
-
-    CompressionResult compressMatrixFixedRate(double*& originalData, int x, int y, int z, uint rate);
-    CompressionResult compressMatrixAccuracy(double*& originalData, int x, int y, int z, double precision);
+    unsigned char* compressMatrix(double* originalData, int x, int y, int z, double rate, int& size);
+    double* decompressMatrix(unsigned char* buffer, int bufferSize);
+    /*
     double* decompressMatrixFixedRate(CompressionResult& result);
     double* decompressMatrixAccuracy(CompressionResult& result);
-
-	size_t calculateDecompressedDataBytes(const ZFPAlgorithms::CompressionResult& compressionResult);
+    */
 }
 
 #endif // _ZFPALGORITHMS_H_ 

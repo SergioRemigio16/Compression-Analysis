@@ -16,8 +16,8 @@ namespace FFTAlgorithms {
     // Function to compare magnitudes for sorting
     bool compareMagnitude(const MagnitudeIndexPair& a, const MagnitudeIndexPair& b);
 
-    unsigned char* compressData(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size);
-    double* decompressData(unsigned char* byteStream, int byteStreamSize);
+    unsigned char* compressMatrix(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size);
+    double* decompressMatrix(unsigned char* byteStream, int byteStreamSize);
 }
 
 #endif // FFT_ALGORITHMS_H
