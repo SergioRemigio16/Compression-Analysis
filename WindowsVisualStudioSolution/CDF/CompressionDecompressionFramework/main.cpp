@@ -1,14 +1,4 @@
 #include "TimingExperiment.h"
-#include "ZFPAlgorithms.h"
-
-#include <zfp.h>
-#include <vector>
-#include <complex>
-#include <iostream>
-#include <chrono>
-#include <fftw3.h>
-#include <numeric>
-#include <cmath>
 
 int main() {
     runTimingExperiment();

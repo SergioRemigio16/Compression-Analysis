@@ -17,7 +17,9 @@ namespace FFTAlgorithms {
     bool compareMagnitude(const MagnitudeIndexPair& a, const MagnitudeIndexPair& b);
 
     unsigned char* compressMatrix(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size);
-    double* decompressMatrix(unsigned char* byteStream, int byteStreamSize);
+    double* decompressMatrix(unsigned char* buffer, int bufferSize);
 }
 
 #endif // FFT_ALGORITHMS_H
+
+

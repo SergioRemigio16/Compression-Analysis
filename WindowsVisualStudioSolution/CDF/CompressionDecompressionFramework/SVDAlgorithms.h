@@ -21,7 +21,7 @@ namespace SVDAlgorithms {
 
 	unsigned char* compressMatrix(double*& originalMatrix, const int x, const int y, const int z, const int k, int& size);
 
-	double* decompressMatrix(unsigned char*& byteStream, int size);
+	double* decompressMatrix(unsigned char*& buffer, int bufferSize);
 
 }
 #endif // _SVDALGORITHMS_H_

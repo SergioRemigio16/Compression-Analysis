@@ -10,6 +10,8 @@
 #include <cmath>
 #include "Utilities.h"
 #include "ZFPAlgorithms.h"
+#include "FFTAlgorithms.h"
+#include "SVDAlgorithms.h"
 
 
 
