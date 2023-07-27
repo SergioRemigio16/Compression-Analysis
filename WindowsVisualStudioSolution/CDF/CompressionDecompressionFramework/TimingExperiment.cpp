@@ -1,6 +1,8 @@
 #include "TimingExperiment.h"
 #include <iomanip>
 #include <fstream>
+#include <thread>
+#include <vector>
 
 #define RUNS 20
 #define WARMUP_RUNS 5
@@ -30,20 +32,6 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
         return;
     }
 
-
-    /*
-    std::cout << "Name: " + algorithmName
-        << ", Frequency: " << waveParams.frequency
-        << ", Amplitude: " << waveParams.amplitude
-        << ", Phase: " << waveParams.phase
-        << ", Fx: " << waveParams.fx
-        << ", Fy: " << waveParams.fy
-        << ", Fz: " << waveParams.fz
-        << ", Rate: " << rate
-        << ", K: " << k
-        << ", CompressionRatio: " << std::left << std::setw(4) << compressionRatio;
-    */
-
     int size = x * y * z;
     double timingOverhead = Utilities::measureTimingOverhead();
 
@@ -56,6 +44,14 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
     mseValues.reserve(RUNS);
     originalSizes.reserve(RUNS);
     compressedSizes.reserve(RUNS);
+
+    // This will store the maximum absolute error for each run
+    std::vector<double> maxErrors;
+    maxErrors.reserve(RUNS);
+
+    // Variables to track the maxError, and the original and decompressed values that generated it
+    double maxError = 0;
+    double maxErrorOriginalValue = 0, maxErrorDecompressedValue = 0;
 
     for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
         double* originalMatrix =
@@ -122,6 +118,27 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
             mseValues.push_back(Utilities::calculateMSE(originalMatrix, decompressedMatrix, size));
             originalSizes.push_back(size * sizeof(double));
             compressedSizes.push_back(compressedSize);
+
+			double currentMaxError = 0;
+            double currentMaxErrorOriginalValue = 0, currentMaxErrorDecompressedValue = 0;
+
+            for (int j = 0; j < size; ++j) {
+                double error = std::abs(originalMatrix[j] - decompressedMatrix[j]);
+                if (error > currentMaxError) {
+                    currentMaxError = error;
+                    currentMaxErrorOriginalValue = originalMatrix[j];
+                    currentMaxErrorDecompressedValue = decompressedMatrix[j];
+                }
+            }
+
+            maxErrors.push_back(currentMaxError);
+
+            // Update global maxError and related values
+            if (currentMaxError > maxError) {
+                maxError = currentMaxError;
+                maxErrorOriginalValue = currentMaxErrorOriginalValue;
+                maxErrorDecompressedValue = currentMaxErrorDecompressedValue;
+            }
         }
 
         if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {
@@ -138,25 +155,59 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
     double meanCompressTime = std::accumulate(compressTimes.begin(), compressTimes.end(), 0.0) / RUNS;
     double meanDecompressTime = std::accumulate(decompressTimes.begin(), decompressTimes.end(), 0.0) / RUNS;
     double meanMSE = std::accumulate(mseValues.begin(), mseValues.end(), 0.0) / RUNS;
-    size_t meanOriginalSize = std::accumulate(originalSizes.begin(), originalSizes.end(), 0) / RUNS;
     size_t meanCompressedSize = std::accumulate(compressedSizes.begin(), compressedSizes.end(), 0) / RUNS;
+    double meanMaxError = std::accumulate(maxErrors.begin(), maxErrors.end(), 0.0) / RUNS;
+    int originalSize = size * sizeof(double);
 
     // Writing to CSV
-    csv << algorithmName << ',' << waveParams.frequency << ',' << waveParams.amplitude << ',' << waveParams.phase << ',' << waveParams.fx << ','
-        << waveParams.fy << ',' << waveParams.fz << ',' << rate << ',' << k << ',' << compressionRatio << ','
-        << x << ',' << y << ',' << z << ',' << meanCompressTime << ',' << meanDecompressTime << ',' << meanMSE << ','
-        << meanOriginalSize << ',' << meanCompressedSize << std::endl;
+    csv << algorithmName << ','
+        << x << ','
+        << y << ','
+        << z << ','
+        << waveParams.frequency << ','
+        << waveParams.amplitude << ','
+        << waveParams.phase << ','
+        << waveParams.fx << ','
+        << waveParams.fy << ','
+        << waveParams.fz << ','
+        << rate << ','
+        << k << ','
+        << compressionRatio << ','
+        << meanCompressTime << ','
+        << meanDecompressTime << ','
+        << meanMSE << ','
+        << originalSize << ','
+        << meanCompressedSize << ','
+        << maxError << ','
+        << maxErrorOriginalValue << ','
+        << maxErrorDecompressedValue
+        << std::endl;
 
     /*
-    std::cout << std::left << std::setw(15) << "Matrix size:"
-        << std::setw(15) << (std::to_string(x) + "x" + std::to_string(y) + "x" + std::to_string(z) + ",")
-        << std::setw(25) << ("meanCompressTime: " + std::to_string(meanCompressTime) + ",")
+    std::cout << std::left
+        << std::setw(10) << "Matrix size:"
+        << std::setw(5) << (std::to_string(x) + "x" + std::to_string(y) + "x" + std::to_string(z) + ",")
+        << std::setw(5) << ("Name: " + algorithmName)
+        << std::setw(20) << (", Frequency: " + std::to_string(waveParams.frequency))
+        << std::setw(20) << (", Amplitude: " + std::to_string(waveParams.amplitude))
+        << std::setw(10) << (", Phase: " + std::to_string(waveParams.phase))
+        << std::setw(15) << (", Fx: " + std::to_string(waveParams.fx))
+        << std::setw(15) << (", Fy: " + std::to_string(waveParams.fy))
+        << std::setw(15) << (", Fz: " + std::to_string(waveParams.fz))
+        << std::setw(10) << (", Rate: " + std::to_string(rate))
+        << std::setw(5) << (", K: " + std::to_string(k))
+        << std::setw(30) << (", CompressionRatio: " + std::to_string(compressionRatio))
+        << std::setw(30) << ("meanCompressTime: " + std::to_string(meanCompressTime) + ",")
         << std::setw(30) << ("meanDecompressTime: " + std::to_string(meanDecompressTime) + ",")
         << std::setw(20) << ("meanMSE: " + std::to_string(meanMSE) + ",")
-        << std::setw(25) << ("meanOriginalSize: " + std::to_string(meanOriginalSize) + ",")
-        << std::setw(25) << ("meanCompressedSize: " + std::to_string(meanCompressedSize))
+        << std::setw(20) << ("OriginalSize: " + std::to_string(size * sizeof(double)) + ",")
+        << std::setw(30) << ("meanCompressedSize: " + std::to_string(meanCompressedSize))
+     	<< std::setw(20) << ("meanMaxError: " + std::to_string(meanMaxError) + ",")
+		<< std::setw(20) << ("maxError: " + std::to_string(maxError) + ",")
+        << std::setw(20) << ("maxErrorOriginalValue: " + std::to_string(maxErrorOriginalValue) + ",")
+        << std::setw(20) << ("maxErrorDecompressedValue: " + std::to_string(maxErrorDecompressedValue))
         << std::endl;
-    */
+        */
 }
 
 
@@ -186,31 +237,120 @@ void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, bool visuali
     }
 }
 
-int runTimingExperiment() {
-    std::ofstream csv("results.csv");
-    csv << "Algorithm,Frequency,Amplitude,Phase,Fx,Fy,Fz,Rate,K,CompressionRatio,X,Y,Z,MeanCompressTime,MeanDecompressTime,MeanMSE,MeanOriginalSize,MeanCompressedSize\n";
+void runTimingExperiment(int x) {
+    std::ofstream csv("results_." + std::to_string(x) + ".csv");
+    csv.precision(15);
 
-    for (int x = 3; x <= 12; ++x) {
-        for (double frequency = 1.0; frequency <= 2.0; frequency += 0.1) {
-            std::cout << frequency << std::endl;
-            for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
-                for (double phase = 0.0; phase <= M_PI; phase += M_PI / 2.0) {
-                    for (double fx = 0.1; fx <= 1.0; fx += 0.3) {
-                        for (double fy = 0.1; fy <= 1.0; fy += 0.3) {
-                            for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
-                                WaveParams waveParams = { frequency, amplitude, phase, fx, fy, fz };
+	csv << "Algorithm Name" << ','
+        << "X" << ','
+		<< "Y" << ','
+		<< "Z" << ','
+		<< "Frequency" << ','
+		<< "Amplitude" << ','
+		<< "Phase" << ','
+		<< "Fx" << ','
+		<< "Fy" << ','
+		<< "Fz" << ','
+		<< "Rate" << ','
+		<< "K" << ','
+		<< "Compression Ratio" << ','
+	    << "Mean Compress Time" << ','
+		<< "Mean Decompress Time" << ','
+		<< "Mean MSE" << ','
+		<< "Original Size" << ','
+		<< "Mean Compressed Size" << ','
+		<< "Max Error" << ','
+		<< "Max Error Original Value" << ','
+		<< "Max Error Decompressed Value" 
+		<< std::endl;
 
-                                for (int algorithm = 0; algorithm < 3; ++algorithm) {
-                                    runExperimentsForRatesAndKs(x, 7, 7, true, false, waveParams, 1, 64, 1, x * 7 * 7, 0.1, 1.0, 0.1, algorithm, csv);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+
+	for (double frequency = 1.0; frequency <= 2.0; frequency += 0.1) {
+		std::cout << x << ": " << frequency << std::endl;
+		for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
+			for (double phase = 0.0; phase <= M_PI; phase += M_PI / 2.0) {
+				for (double fx = 0.1; fx <= 1.0; fx += 0.3) {
+					for (double fy = 0.1; fy <= 1.0; fy += 0.3) {
+						for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
+							WaveParams waveParams = { frequency, amplitude, phase, fx, fy, fz };
+
+							for (int algorithm = 0; algorithm < 2; ++algorithm) {
+								runExperimentsForRatesAndKs(x, 7, 7, true, false, waveParams, 1, 64, 1, x * 7 * 7, 0.1, 1.0, 0.1, algorithm, csv);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+    csv.close();
+}
+
+void runTimingExperimentFFTOnly() {
+    std::ofstream csv("results_FFT.csv");
+    csv.precision(15);
+	csv << "Algorithm Name" << ','
+        << "X" << ','
+		<< "Y" << ','
+		<< "Z" << ','
+		<< "Frequency" << ','
+		<< "Amplitude" << ','
+		<< "Phase" << ','
+		<< "Fx" << ','
+		<< "Fy" << ','
+		<< "Fz" << ','
+		<< "Rate" << ','
+		<< "K" << ','
+		<< "Compression Ratio" << ','
+		<< "Mean Compress Time" << ','
+		<< "Mean Decompress Time" << ','
+		<< "Mean MSE" << ','
+		<< "Original Size" << ','
+		<< "Mean Compressed Size" << ','
+		<< "Max Error" << ','
+		<< "Max Error Original Value" << ','
+		<< "Max Error Decompressed Value" 
+		<< std::endl;
+    for (int x = 3; x <= 12; x++) {
+		std::cout << "FFT: " << x << std::endl;
+		for (double frequency = 1.0; frequency <= 2.0; frequency += 0.1) {
+			for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
+				for (double phase = 0.0; phase <= M_PI; phase += M_PI / 2.0) {
+					for (double fx = 0.1; fx <= 1.0; fx += 0.3) {
+						for (double fy = 0.1; fy <= 1.0; fy += 0.3) {
+							for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
+								WaveParams waveParams = { frequency, amplitude, phase, fx, fy, fz };
+
+								for (int algorithm = 2; algorithm < 3; ++algorithm) { // Only the FFT algorithm
+									runExperimentsForRatesAndKs(x, 7, 7, true, false, waveParams, 1, 64, 1, x * 7 * 7, 0.1, 1.0, 0.1, algorithm, csv);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
     }
 
     csv.close();
-    return 0;
 }
+
+
+void start() {
+
+    std::vector<std::thread> threads;
+
+    for (int x = 3; x <= 12; ++x) {
+        threads.push_back(std::thread(runTimingExperiment, x));
+    }
+    threads.push_back(std::thread(runTimingExperimentFFTOnly));
+    
+
+    // Join the threads
+    for (auto& th : threads) {
+        th.join();
+    }
+    int i = 0;
+}
+

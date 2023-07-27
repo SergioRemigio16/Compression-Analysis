@@ -27,6 +27,10 @@ void runExperiment(int x, int y, int z, bool useWave, bool visualizeData, int ra
 // Run experiments for a range of rates
 void runExperimentsForRates(int x, int y, int z, bool useWave, bool visualizeData, int minRate, int maxRate);
 
-int runTimingExperiment();
+void runTimingExperimentFFTOnly();
+
+void runTimingExperiment(int x);
+
+void start();
 
 #endif 

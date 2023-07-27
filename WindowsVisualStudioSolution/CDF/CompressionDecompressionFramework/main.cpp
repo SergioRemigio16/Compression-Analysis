@@ -1,7 +1,7 @@
 #include "TimingExperiment.h"
 
 int main() {
-    runTimingExperiment();
+    start();
 }
 
 
