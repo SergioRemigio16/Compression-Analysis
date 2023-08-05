@@ -18,6 +18,8 @@ namespace FFTAlgorithms {
 
     unsigned char* compressMatrix(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size);
     double* decompressMatrix(unsigned char* buffer, int bufferSize);
+    unsigned char* compressMatrix(fftw_plan p, double* originalMatrix, int x, int y, int z, double compressionRatio, int& size);
+    double* decompressMatrix(fftw_plan q, unsigned char* byteStream, int byteStreamSize);
 }
 
 #endif // FFT_ALGORITHMS_H

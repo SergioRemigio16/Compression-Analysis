@@ -18,6 +18,10 @@ bool FFTAlgorithms::compareMagnitude(const MagnitudeIndexPair& a, const Magnitud
 }
 
 unsigned char* FFTAlgorithms::compressMatrix(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size) {
+    if (compressionRatio > 1)
+    {
+        compressionRatio = 1;
+    }
     // Performing FFT on the original matrix
     ComplexVec complexMatrix(x * y * z);
     fftw_plan p = fftw_plan_dft_r2c_3d(x, y, z, originalMatrix,
@@ -51,9 +55,22 @@ unsigned char* FFTAlgorithms::compressMatrix(double* originalMatrix, int x, int 
     for (int i = 0; i < numToKeep; ++i) {
         int idx = magnitudes[x * y * z - 1 - i].second;
         bitMask[idx / 8] |= (1 << (idx % 8));
-        std::memcpy(dataPtr, &complexMatrix[idx], sizeof(std::complex<double>));
-        dataPtr += sizeof(std::complex<double>);
     }
+
+	// Zero out least significant frequency components
+	int numToZeroOut = x * y * z - numToKeep; // Number of components to zero out
+	for (int i = 0; i < numToZeroOut; ++i) {
+		int idx = magnitudes[i].second; // Get the index of the least significant component
+		complexMatrix[idx] = 0.0; // Set that component to zero
+	}
+
+	// Iterate over the unsorted complex matrix and copy non-zero values to byte stream
+	for (int idx = 0; idx < x * y * z; ++idx) {
+		if (complexMatrix[idx] != 0.0) { // Check if the component is non-zero
+			std::memcpy(dataPtr, &complexMatrix[idx], sizeof(std::complex<double>));
+			dataPtr += sizeof(std::complex<double>);
+		}
+	}
 
     // Copy the bitmask to the byteStream
     std::memcpy(byteStream + 3 * sizeof(int), bitMask, bitMaskSize);
@@ -119,17 +136,17 @@ double* FFTAlgorithms::decompressMatrix(unsigned char* byteStream, int byteStrea
 /*
 int main() {
     int x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
-    double compressionRatio = 0.56; // Compression ratio. 0.9 means keeping 90% of the orignial data
+    double compressionRatio = .8; // Compression ratio. 0.9 means keeping 90% of the orignial data
 
     // Define original matrix
     double* originalMatrix = Utilities::createMatrixWave(x, y, z, 1, 3.1415, 0, 1.0, 1.0, 7);
 
     // Compressing the data
     int byteStreamSize;
-    unsigned char* byteStream = FFTAlgorithms::compressData(originalMatrix, x, y, z, compressionRatio, byteStreamSize);
+    unsigned char* byteStream = FFTAlgorithms::compressMatrix(originalMatrix, x, y, z, compressionRatio, byteStreamSize);
 
     // Decompressing the received data
-    double* decompressedMatrix = FFTAlgorithms::decompressData(byteStream, byteStreamSize);
+    double* decompressedMatrix = FFTAlgorithms::decompressMatrix(byteStream, byteStreamSize);
 
     // Printing comparison of original and decompressed data
     Utilities::printComparison(originalMatrix, decompressedMatrix, x, y, z);
@@ -148,6 +165,4 @@ int main() {
 
     return 0;
 }
-
 */
-
