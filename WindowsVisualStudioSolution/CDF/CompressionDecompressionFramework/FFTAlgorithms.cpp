@@ -17,6 +17,22 @@ bool FFTAlgorithms::compareMagnitude(const MagnitudeIndexPair& a, const Magnitud
     return a.first < b.first;
 }
 
+/**
+ * @brief Compresses a 3D matrix using Fast Fourier Transform (FFT).
+ * 
+ * This function performs FFT on a given 3D matrix and then compresses the result based on a provided compression ratio. 
+ * The compressed data and a bitmask indicating which components are non-zero are stored in a single byte stream.
+ * 
+ * @param originalMatrix Pointer to the original 3D matrix of doubles to be compressed.
+ * @param x The size of the matrix along the x-axis.
+ * @param y The size of the matrix along the y-axis.
+ * @param z The size of the matrix along the z-axis.
+ * @param compressionRatio Ratio of frequency components to retain (range from 0 to 1). 
+ *        If given a value greater than 1, it is set to 1.
+ * @param[out] size Output parameter indicating the size of the compressed data.
+ * 
+ * @return A pointer to the byte stream containing the compressed data.
+ */
 unsigned char* FFTAlgorithms::compressMatrix(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size) {
     if (compressionRatio > 1)
     {

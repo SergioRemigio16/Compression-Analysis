@@ -1,6 +1,3 @@
-#pragma once
-
-
 /*
   -----------------------------------------------------------------------
   Implementation of data compression algorithm based on the following paper:
@@ -20,7 +17,32 @@
   Illustrations are given of the fidelity obtainable for geophysical data.
   -----------------------------------------------------------------------
 */
-class ChebyshevAlgorithms
-{
-};
+
+#ifndef _CHEBYSHEVALGORITHMS_H_
+#define _CHEBYSHEVALGORITHMS_H_
+
+// Disables Eigen's memory alignment which could lead to extra memory padding.
+#define EIGEN_DONT_ALIGN
+#include <Eigen/Dense> // Include this header for matrix and vector operations
+#include <iostream>
+#include <utility>
+#include <unordered_map>
+#include <boost/math/special_functions/chebyshev.hpp>
+
+
+
+
+
+// This namespace encapsulates all methods and types for SVD-based compression.
+namespace ChebyshevAlgorithms {
+
+	double chebyshevT(int n, double x);
+
+	/*
+	unsigned char* compressMatrix(double*& originalMatrix, const int x, const int y, const int z, const int k, int& size);
+	double* decompressMatrix(unsigned char*& buffer, int bufferSize);
+	*/
+
+}
+#endif // _CHEBYSHEVALGORITHMS_H_
 
