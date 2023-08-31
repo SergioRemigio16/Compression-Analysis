@@ -19,7 +19,7 @@ struct WaveParams {
 
 
 int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
-	const WaveParams& waveParams, int rate, int k, double compressionRatio, int algorithm, std::ofstream& csv) {
+	const WaveParams& waveParams, int ZFPRate, int SVDK, double FFTRatio, int algorithm, std::ofstream& csv) {
 
 	std::string algorithmName;
 
@@ -72,7 +72,7 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 		case 0:  // ZFP
 		{
 			auto start = std::chrono::high_resolution_clock::now();
-			compressedMatrix = ZFPAlgorithms::compressMatrix(originalMatrix, x, y, z, rate, compressedSize);
+			compressedMatrix = ZFPAlgorithms::compressMatrix(originalMatrix, x, y, z, ZFPRate, compressedSize);
 			auto end = std::chrono::high_resolution_clock::now();
 			compressTime = end - start;
 
@@ -85,7 +85,7 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 		case 1:  // SVD
 		{
 			auto start = std::chrono::high_resolution_clock::now();
-			compressedMatrix = SVDAlgorithms::compressMatrix(originalMatrix, x, y, z, k, compressedSize);
+			compressedMatrix = SVDAlgorithms::compressMatrix(originalMatrix, x, y, z, SVDK, compressedSize);
 			auto end = std::chrono::high_resolution_clock::now();
 			compressTime = end - start;
 
@@ -98,7 +98,7 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 		case 2:  // FFT
 		{
 			auto start = std::chrono::high_resolution_clock::now();
-			compressedMatrix = FFTAlgorithms::compressMatrix(originalMatrix, x, y, z, compressionRatio, compressedSize);
+			compressedMatrix = FFTAlgorithms::compressMatrix(originalMatrix, x, y, z, FFTRatio, compressedSize);
 			auto end = std::chrono::high_resolution_clock::now();
 			compressTime = end - start;
 
@@ -175,11 +175,11 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 	<< waveParams.fz << ',';
 	// Conditionally write rate, k, and compressionRatio
 	if (algorithm == 0) { // ZFP
-		csv << rate << ",,";
+		csv << ZFPRate << ",,,";
 	} else if (algorithm == 1) { // SVD
-		csv << ',' << k << ',' ;
+		csv << ',' << SVDK << ",," ;
 	} else if (algorithm == 2) { // FFT
-		csv << ",," << compressionRatio << ',';
+		csv << ",," << FFTRatio << ',';
 	} else {
 		csv << ",,,"; // If no algorithm matches, make sure to add the commas
 	}
@@ -280,7 +280,7 @@ void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, bool visuali
 
 
 void runTimingExperiment(int x) {
-	std::ofstream csv("results_." + std::to_string(x) + ".csv");
+	std::ofstream csv("results_" + std::to_string(x) + ".csv");
 	csv.precision(15);
 
 	csv << "Algorithm Name" << ','
@@ -293,9 +293,9 @@ void runTimingExperiment(int x) {
 		<< "Fx" << ','
 		<< "Fy" << ','
 		<< "Fz" << ','
-		<< "Rate" << ','
-		<< "K" << ','
-		<< "Compression Ratio" << ','
+		<< "ZFP Rate" << ','
+		<< "SVD K" << ','
+		<< "FFT Ratio" << ','
 		<< "Mean Compress Time" << ','
 		<< "Mean Decompress Time" << ','
 		<< "Mean MSE" << ','
@@ -342,9 +342,9 @@ void runTimingExperimentFFTOnly() {
 		<< "Fx" << ','
 		<< "Fy" << ','
 		<< "Fz" << ','
-		<< "Rate" << ','
-		<< "K" << ','
-		<< "Compression Ratio" << ','
+		<< "FFT Rate" << ','
+		<< "SVD K" << ','
+		<< "FFT Ratio" << ','
 		<< "Mean Compress Time" << ','
 		<< "Mean Decompress Time" << ','
 		<< "Mean MSE" << ','
@@ -354,7 +354,7 @@ void runTimingExperimentFFTOnly() {
 		<< "Max Error Original Value" << ','
 		<< "Max Error Decompressed Value"
 		<< std::endl;
-	for (int x = 3; x <= 12; x++) {
+	for (int x = 3; x <= 3; x++) {
 		std::cout << "FFT: " << x << std::endl;
 		for (double frequency = 1.0; frequency <= 2.0; frequency += 0.1) {
 			for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
@@ -383,7 +383,7 @@ void start() {
 
 	std::vector<std::thread> threads;
 
-	for (int x = 3; x <= 12; ++x) {
+	for (int x = 3; x <= 3; ++x) {
 		threads.push_back(std::thread(runTimingExperiment, x));
 	}
 	threads.push_back(std::thread(runTimingExperimentFFTOnly));

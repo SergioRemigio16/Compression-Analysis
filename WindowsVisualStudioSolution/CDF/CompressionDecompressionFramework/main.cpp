@@ -1,14 +1,47 @@
 #include "TimingExperiment.h"
 #include "FFTAlgorithms.h"
 #include "Utilities.h"
+#include <boost/math/special_functions/chebyshev.hpp>
+#include <tuple>
+
+
+/*
+double* compress_matrix(double* originalMatrix, int x, int y, int z, int k, int l, int m) {
+    if (k > x) {
+        k = 3;
+    }
+    if (l > y) {
+        k = 3;
+    }
+    if (m > z) {
+        k = 3;
+    }
+}
+
+void decompress_matrix(double* compressedCoeffs, double* decompressedMatrix, int x, int y, int z, int degree) {
+
+}
+*/
 
 int main() {
-    start();
+    #if __cplusplus==201703L
+        std::cout << "C++17\n";
+    #elif __cplusplus==201402L
+        std::cout << "C++14\n";
+    #elif __cplusplus==201103L
+        std::cout << "C++11\n";
+    #else
+        std::cout << "C++ version unknown\n";
+    #endif
+    //start();
 }
+
+
+
 
 /*
 int main() {
-    int x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
+    int x = 3, y = 7, z = 7; // Dimensions of matrix. 
     double compressionRatio = .8; // Compression ratio. 0.9 means keeping 90% of the orignial data
 
     // Define original matrix
