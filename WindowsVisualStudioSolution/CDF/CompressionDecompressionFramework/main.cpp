@@ -14,19 +14,23 @@ int main() {
 	double* originalMatrix = Utilities::createMatrixWave(x, y, z, 1, 1, 1, 1.0, 1.0, 1);
 	// The first degree polynomials for each dimension
 	int N = 3;
-	int Q = 7;
+	int Q = 6;
 	int S = 7;
 	
 	int bufferSize;
 
 	unsigned char* buffer = ChebyshevAlgorithms::compressMatrix(originalMatrix, x, y, z, N, Q, S, bufferSize);
-	//double* decompressedMatrix = ChebyshevAlgorithms::decompressMatrix(buffer, bufferSize);
+	double* decompressedMatrix = ChebyshevAlgorithms::decompressMatrix(buffer, bufferSize);
 
-	//Utilities::printComparison(originalMatrix, decompressedMatrix, x, y, z);
-	//Utilities::printError(originalMatrix, decompressedMatrix, x, y, z);
+	Utilities::printComparison(originalMatrix, decompressedMatrix, x, y, z);
+	Utilities::printError(originalMatrix, decompressedMatrix, x, y, z);
 
+	// Printing size of original and serialized compressed data
+	std::cout << "Size of original matrix (bytes): " << (x * y * z) * sizeof(double) << "\n";
+	std::cout << "Size of serialized compressed data (bytes): " << bufferSize << "\n";
+
+	delete[] decompressedMatrix;
 	delete[] originalMatrix;
-	//delete[] decompressedMatrix;
 
 	return 0;
 }

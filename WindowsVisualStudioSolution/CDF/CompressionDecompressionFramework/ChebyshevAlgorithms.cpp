@@ -82,47 +82,12 @@ double ChebyshevAlgorithms::chebyshevT(int n, double x) {
 	return result;
 }
 
-
-/**
- * @brief
- *
- * N, Q, and S must be less than or equal to x, y, and z respectively. 
- *
- * @param originalMatrix A three dimensional array represented in one dimension through row majoring order
- * @param x The number of elements in the x dimension
- * @param y The number of elements in the y dimension
- * @param z The number of elements in the z dimension
- * @param N The number of the coefficients in the x dimension
- * @param Q The number of the coefficients in the y dimension
- * @param S The number of the coefficients in the z dimension
- *
- * @return A pointer to the byte stream containing the compressed data.
- */
-unsigned char* ChebyshevAlgorithms::compressMatrix(double*& originalMatrix, int x, int y, int z, int N, int Q, int S, int& bufferSize) {
-	// Normalize the data inside originalMatrix
-	double minVal = *std::min_element(originalMatrix, originalMatrix + x * y * z);
-	double maxVal = *std::max_element(originalMatrix, originalMatrix + x * y * z);
-	double range = maxVal - minVal;
-
-	// Create normalizedMatrix as Eigen::VectorXd
-	Eigen::VectorXd normalizedMatrix(x * y * z);
-	for (int i = 0; i < x; ++i) {
-		for (int j = 0; j < y; ++j) {
-			for (int k = 0; k < z; ++k) {
-				normalizedMatrix(i * y * z + j * z + k) = ((originalMatrix[i * y * z + j * z + k] - minVal) / range) * 2.0 - 1.0;
-			}
-		}
-	}
-
-	// Example how to get a chebyshev polynomial 
-	double result = ChebyshevAlgorithms::chebyshevT(4, 0.3);
+Eigen::MatrixXd getFullKronProductTruncated(int x, int y, int z, int N, int Q, int S) {
 
 	// Calculate A, B, and C, where A = x x N, B = y x Q, and C = z x S
-
 	Eigen::MatrixXd A(x, N);
 	Eigen::MatrixXd B(y, Q);
 	Eigen::MatrixXd C(z, S);
-
 
 	// Populate A using Chebyshev polynomials
 	for (int i = 0; i < x; ++i) {
@@ -181,9 +146,115 @@ unsigned char* ChebyshevAlgorithms::compressMatrix(double*& originalMatrix, int 
     // Calculate the Kronecker product with truncated U matrices
     Eigen::MatrixXd UA_UB_kron = kroneckerProduct(UA_truncated, UB_truncated);
     Eigen::MatrixXd full_kron_product_truncated = kroneckerProduct(UA_UB_kron, UC_truncated);
+	return full_kron_product_truncated;
+}
 
-    // Calculate the coefficients using the truncated Kronecker product
+
+/**
+ * @brief
+ *
+ * N, Q, and S must be less than or equal to x, y, and z respectively. 
+ *
+ * @param originalMatrix A three dimensional array represented in one dimension through row majoring order
+ * @param x The number of elements in the x dimension
+ * @param y The number of elements in the y dimension
+ * @param z The number of elements in the z dimension
+ * @param N The number of the coefficients in the x dimension
+ * @param Q The number of the coefficients in the y dimension
+ * @param S The number of the coefficients in the z dimension
+ *
+ * @return A pointer to the byte stream containing the compressed data.
+ */
+unsigned char* ChebyshevAlgorithms::compressMatrix(double*& originalMatrix, int x, int y, int z, int N, int Q, int S, int& bufferSize) {
+	// Normalize the data inside originalMatrix
+	double minVal = *std::min_element(originalMatrix, originalMatrix + x * y * z);
+	double maxVal = *std::max_element(originalMatrix, originalMatrix + x * y * z);
+	double range = maxVal - minVal;
+
+	// Create normalizedMatrix as Eigen::VectorXd
+	Eigen::VectorXd normalizedMatrix(x * y * z);
+	for (int i = 0; i < x; ++i) {
+		for (int j = 0; j < y; ++j) {
+			for (int k = 0; k < z; ++k) {
+				normalizedMatrix(i * y * z + j * z + k) = ((originalMatrix[i * y * z + j * z + k] - minVal) / range) * 2.0 - 1.0;
+			}
+		}
+	}
+
+	Eigen::MatrixXd full_kron_product_truncated = getFullKronProductTruncated(x, y, z, N, Q, S);
+
+    // Calculate the coefficients using the truncated Kronecker product 
     Eigen::VectorXd coefficients_truncated = full_kron_product_truncated.transpose() * normalizedMatrix;
+
+	// x + y + z + N + Q + S + minVal + maxVal + buffer
+	bufferSize = (6 * sizeof(int)) + (2 * sizeof(double)) + (N * Q * S * sizeof(double));
+
+	unsigned char* buffer = new unsigned char[bufferSize];
+    unsigned char* ptr = buffer; 
+
+	// Add x, y, and z integers to the buffer
+	memcpy(ptr, &x, sizeof(int));
+	ptr += sizeof(int);
+	memcpy(ptr, &y, sizeof(int));
+	ptr += sizeof(int);
+	memcpy(ptr, &z, sizeof(int));
+	ptr += sizeof(int);
+	// Add N, Q, and S integers to the buffer
+	memcpy(ptr, &N, sizeof(int));
+	ptr += sizeof(int);
+	memcpy(ptr, &Q, sizeof(int));
+	ptr += sizeof(int);
+	memcpy(ptr, &S, sizeof(int));
+	ptr += sizeof(int);
+	// Add minVal and maxVal to the buffer
+	memcpy(ptr, &minVal, sizeof(double));
+	ptr += sizeof(double);
+	memcpy(ptr, &maxVal, sizeof(double));
+	ptr += sizeof(double);
+
+    for (size_t i = 0; i < coefficients_truncated.size(); ++i) {
+		memcpy(ptr, &coefficients_truncated[i], sizeof(double));
+		ptr += sizeof(double);
+    }
+
+	return buffer;
+}
+
+double* ChebyshevAlgorithms::decompressMatrix(unsigned char*& buffer, int bufferSize) {
+	unsigned char* ptr = buffer;
+
+    // Unpack x, y, and z from buffer
+    int x, y, z;
+    memcpy(&x, ptr, sizeof(int));
+    ptr += sizeof(int);
+    memcpy(&y, ptr, sizeof(int));
+    ptr += sizeof(int);
+    memcpy(&z, ptr, sizeof(int));
+    ptr += sizeof(int);
+    // Unpack N, Q, and S from buffer
+	int N, Q, S;
+    memcpy(&N, ptr, sizeof(int));
+    ptr += sizeof(int);
+    memcpy(&Q, ptr, sizeof(int));
+    ptr += sizeof(int);
+    memcpy(&S, ptr, sizeof(int));
+    ptr += sizeof(int);
+	// Unpack minVal and maxVal from buffer
+	double minVal, maxVal;
+	memcpy(&minVal, ptr, sizeof(double));
+    ptr += sizeof(double);
+    memcpy(&maxVal, ptr, sizeof(double));
+    ptr += sizeof(double);
+
+    // Unpack the coefficients
+	int numCoefficients = N * Q * S;
+	Eigen::VectorXd coefficients_truncated = Eigen::VectorXd::Zero(numCoefficients);
+	for (int i = 0; i < numCoefficients; ++i) {
+		memcpy(&coefficients_truncated[i], ptr, sizeof(double));
+		ptr += sizeof(double);
+	}
+
+	Eigen::MatrixXd full_kron_product_truncated = getFullKronProductTruncated(x, y, z, N, Q, S);
 
     // Reconstruct the matrix using the coefficients and the truncated Kronecker product
     Eigen::VectorXd reconstructedMatrix = full_kron_product_truncated * coefficients_truncated;
@@ -195,21 +266,13 @@ unsigned char* ChebyshevAlgorithms::compressMatrix(double*& originalMatrix, int 
 	}
 
 	// Unnormalize the data
+	double range = maxVal - minVal;
 	for (int i = 0; i < x * y * z; ++i) {
 		reconstructedArray[i] = ((reconstructedArray[i] + 1.0) / 2.0) * range + minVal;
 	}
 
 
-	Utilities::printComparison(originalMatrix, reconstructedArray, x, y, z);
-	Utilities::printError(originalMatrix, reconstructedArray, x, y, z);
-
-	return NULL;
-
-}
-
-
-double* ChebyshevAlgorithms::decompressMatrix(unsigned char*& buffer, int bufferSize) {
-	return NULL;
+	return reconstructedArray;
 }
 
 
