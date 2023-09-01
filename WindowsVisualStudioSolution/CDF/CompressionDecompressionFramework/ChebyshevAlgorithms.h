@@ -28,9 +28,7 @@
 #include <utility>
 #include <unordered_map>
 #include <boost/math/special_functions/chebyshev.hpp>
-
-
-
+#include "Utilities.h"
 
 
 // This namespace encapsulates all methods and types for SVD-based compression.
@@ -38,10 +36,8 @@ namespace ChebyshevAlgorithms {
 
 	double chebyshevT(int n, double x);
 
-	/*
-	unsigned char* compressMatrix(double*& originalMatrix, const int x, const int y, const int z, const int k, int& size);
+	unsigned char* compressMatrix(double*& originalMatrix, int x, int y, int z, int N, int Q, int S, int& bufferSize);
 	double* decompressMatrix(unsigned char*& buffer, int bufferSize);
-	*/
 
 }
 #endif // _CHEBYSHEVALGORITHMS_H_
