@@ -7,7 +7,6 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include "ZFPAlgorithms.h"
 #include <algorithm>
 
 namespace Utilities {

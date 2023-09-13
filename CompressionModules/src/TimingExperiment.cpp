@@ -18,15 +18,17 @@ struct WaveParams {
 };
 
 
-int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
-	const WaveParams& waveParams, int ZFPRate, int SVDK, double FFTRatio, int algorithm, std::ofstream& csv) {
+int runExperiment(int x, int y, int z, bool useWave, const WaveParams& waveParams, 
+	int ZFPRate, int SVDK, double FFTRatio, int N, int Q, int S,
+	int algorithm, std::ofstream& csv) {
 
 	std::string algorithmName;
 
 	switch (algorithm) {
 	case 0: algorithmName = "ZFP"; break;
 	case 1: algorithmName = "SVD"; break;
-	case 2: algorithmName = "FFT"; break;
+	case 2: algorithmName = "Chebyshev"; break;
+	case 3: algorithmName = "FFT"; break;
 	default:
 		std::cerr << "Invalid algorithm specified.\n";
 		return 2;
@@ -56,11 +58,6 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 	for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
 		double* originalMatrix =
 			Utilities::createMatrixWave(x, y, z, waveParams.frequency, waveParams.amplitude, waveParams.phase, waveParams.fx, waveParams.fy, waveParams.fz);
-
-		if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {
-			std::cout << "Original Data:\n";
-			Utilities::printMatrix(originalMatrix, x, y, z);
-		}
 
 		unsigned char* compressedMatrix = nullptr;
 		double* decompressedMatrix = nullptr;
@@ -95,7 +92,20 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 			decompressTime = end - start;
 			break;
 		}
-		case 2:  // FFT
+		case 2: // Chebyshev
+		{
+			auto start = std::chrono::high_resolution_clock::now();
+			compressedMatrix = ChebyshevAlgorithms::compressMatrix(originalMatrix, x, y, z, N, Q, S, compressedSize);
+			auto end = std::chrono::high_resolution_clock::now();
+			compressTime = end - start;
+
+			start = std::chrono::high_resolution_clock::now();
+			decompressedMatrix = ChebyshevAlgorithms::decompressMatrix(compressedMatrix, compressedSize);
+			end = std::chrono::high_resolution_clock::now();
+			decompressTime = end - start;
+			break;
+		}
+		case 3:  // FFT
 		{
 			auto start = std::chrono::high_resolution_clock::now();
 			compressedMatrix = FFTAlgorithms::compressMatrix(originalMatrix, x, y, z, FFTRatio, compressedSize);
@@ -144,11 +154,6 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 			}
 		}
 
-		if (visualizeData && i == RUNS + WARMUP_RUNS - 1) {
-			std::cout << "Decompressed Data:\n";
-			Utilities::printMatrix(decompressedMatrix, x, y, z);
-		}
-
 		delete[] compressedMatrix;
 		delete[] decompressedMatrix;
 
@@ -175,13 +180,19 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 	<< waveParams.fz << ',';
 	// Conditionally write rate, k, and compressionRatio
 	if (algorithm == 0) { // ZFP
-		csv << ZFPRate << ",,,";
-	} else if (algorithm == 1) { // SVD
-		csv << ',' << SVDK << ",," ;
-	} else if (algorithm == 2) { // FFT
-		csv << ",," << FFTRatio << ',';
-	} else {
-		csv << ",,,"; // If no algorithm matches, make sure to add the commas
+		csv << ZFPRate << ",,,,,,";
+	} 
+	else if (algorithm == 1) { // SVD
+		csv << ',' << SVDK << ",,,,,";
+	} 
+	else if (algorithm == 2) { // Chebyshev
+		csv << ",," << N << ',' << Q << ',' << S << ",,";
+	} 
+	else if (algorithm == 3) { // FFT
+		csv << ",,,,," << FFTRatio << ',';
+	} 
+	else {
+		csv << ",,,,,,,"; // If no algorithm matches, make sure to add the commas
 	}
 	csv << meanCompressTime << ','
 	<< meanDecompressTime << ','
@@ -222,18 +233,16 @@ int runExperiment(int x, int y, int z, bool useWave, bool visualizeData,
 		return 0;
 }
 
-void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, bool visualizeData,
-	const WaveParams& waveParams, int minRate, int maxRate, int minK, int maxK,
+void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, const WaveParams& waveParams, 
+	int minRate, int maxRate, int minK, int maxK, 
+	int minN, int maxN, int minQ, int maxQ, int minS, int maxS,
 	double minCompressionRatio, double maxCompressionRatio, double compressionRatioStep,
 	int algorithm, std::ofstream& csv) {
-
-	int minDimension = std::min({ x, y, z });
-	maxK = std::min(maxK, minDimension);
-
 	switch (algorithm) {
 		case 0: // ZFP
 			for (int rate = minRate; rate <= maxRate; ++rate) {
-				int result = runExperiment(x, y, z, useWave, visualizeData, waveParams, rate, minK, minCompressionRatio, algorithm, csv);
+				int result = runExperiment(x, y, z, useWave, waveParams, rate, 0, 0, 
+					0, 0, 0, algorithm, csv);
 				if (result == 1) {
 					return;
 				}
@@ -246,7 +255,8 @@ void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, bool visuali
 			break;
 		case 1: // SVD
 			for (int k = minK; k <= maxK; ++k) {
-				int result = runExperiment(x, y, z, useWave, visualizeData, waveParams, minRate, k, minCompressionRatio, algorithm, csv);
+				int result = runExperiment(x, y, z, useWave, waveParams, 0, k, 0, 
+					0, 0, 0, algorithm, csv);
 				if (result == 1) {
 					return;
 				}
@@ -255,12 +265,29 @@ void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, bool visuali
 					// Throwing an exception
 					throw std::runtime_error("Invalid algorithm used in experiment.");
 				}
-
 			}
 			break;
-		case 2: // FFT
+		case 2: // Chebyshev
+			for (int N = minN; N <= maxN; N = N + 2) {
+				for (int Q = minQ; Q <= maxQ; Q = Q + 2) {
+					for (int S = minS; S <= maxS; S = S + 2) {
+						int result = runExperiment(x, y, z, useWave, waveParams, 0, 0, 0, N, Q, S, algorithm, csv);
+						if (result == 1) {
+							return;
+						}
+						else if (result == 2)
+						{
+							// Throwing an exception
+							throw std::runtime_error("Invalid algorithm used in experiment.");
+						}
+					}
+				}
+			}
+			break;
+		case 3: // FFT
 			for (double compressionRatio = minCompressionRatio; compressionRatio <= maxCompressionRatio; compressionRatio += compressionRatioStep) {
-				int result = runExperiment(x, y, z, useWave, visualizeData, waveParams, minRate, minK, compressionRatio, algorithm, csv);
+				int result = runExperiment(x, y, z, useWave, waveParams, 0, 0, compressionRatio, 
+					0, 0, 0, algorithm, csv);
 				if (result == 1) {
 					return;
 				}
@@ -269,7 +296,6 @@ void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, bool visuali
 					// Throwing an exception
 					throw std::runtime_error("Invalid algorithm used in experiment.");
 				}
-
 			}
 			break;
 		default:
@@ -279,7 +305,7 @@ void runExperimentsForRatesAndKs(int x, int y, int z, bool useWave, bool visuali
 }
 
 
-void runTimingExperiment(int x) {
+void runTimingExperiment(int x, int y, int z) {
 	std::ofstream csv("results_" + std::to_string(x) + ".csv");
 	csv.precision(15);
 
@@ -295,6 +321,9 @@ void runTimingExperiment(int x) {
 		<< "Fz" << ','
 		<< "ZFP Rate" << ','
 		<< "SVD K" << ','
+		<< "Cheby N" << ','
+		<< "Cheby Q" << ','
+		<< "Cheby S" << ','
 		<< "FFT Ratio" << ','
 		<< "Mean Compress Time" << ','
 		<< "Mean Decompress Time" << ','
@@ -316,8 +345,13 @@ void runTimingExperiment(int x) {
 						for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
 							WaveParams waveParams = { frequency, amplitude, phase, fx, fy, fz };
 
-							for (int algorithm = 0; algorithm < 2; ++algorithm) {
-								runExperimentsForRatesAndKs(x, 7, 7, true, false, waveParams, 1, 64, 1, x * 7 * 7, 1, 1, 1, algorithm, csv);
+							for (int algorithm = 0; algorithm < 3; ++algorithm) {
+								runExperimentsForRatesAndKs(x, y, z, true, waveParams,
+									1, 64, //minRate, maxRate
+									1, std:: min(x * y, z), //minK, maxK
+									1, x, 1, y, 1, z,// minN, maxN, minQ, maxQ, minS, maxS
+									0, 0, 0, //FFT 
+									algorithm, csv);
 							}
 						}
 					}
@@ -344,6 +378,9 @@ void runTimingExperimentFFTOnly() {
 		<< "Fz" << ','
 		<< "FFT Rate" << ','
 		<< "SVD K" << ','
+		<< "Cheby N" << ','
+		<< "Cheby Q" << ','
+		<< "Cheby S" << ','
 		<< "FFT Ratio" << ','
 		<< "Mean Compress Time" << ','
 		<< "Mean Decompress Time" << ','
@@ -364,8 +401,10 @@ void runTimingExperimentFFTOnly() {
 							for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
 								WaveParams waveParams = { frequency, amplitude, phase, fx, fy, fz };
 
-								for (int algorithm = 2; algorithm < 3; ++algorithm) { // Only the FFT algorithm
-									runExperimentsForRatesAndKs(x, 7, 7, true, false, waveParams, 1, 64, 1, x * 7 * 7, 0.1, 1.0, 0.05, algorithm, csv);
+								for (int algorithm = 3; algorithm < 4; ++algorithm) { // Only the FFT algorithm
+									runExperimentsForRatesAndKs(x, 7, 7, true, waveParams, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+										0.1, 1.0, 0.05, // minCompressionRatio, maxCompressionRatio, compressionRatioStep
+										algorithm, csv);
 								}
 							}
 						}
@@ -383,8 +422,12 @@ void start() {
 
 	std::vector<std::thread> threads;
 
+	int y = 7;
+	int z = 7;
+
 	for (int x = 3; x <= 3; ++x) {
-		threads.push_back(std::thread(runTimingExperiment, x));
+		threads.push_back(std::thread(runTimingExperiment, x, y, z));
+		//threads.push_back(std::thread(std::bind(runTimingExperiment, x, y, z)));
 	}
 	threads.push_back(std::thread(runTimingExperimentFFTOnly));
 

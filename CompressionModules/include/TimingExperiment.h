@@ -9,12 +9,12 @@
 #include <numeric>
 #include <cmath>
 #include "Utilities.h"
-#include "ZFPAlgorithms.h"
-#include "FFTAlgorithms.h"
-#include "SVDAlgorithms.h"
+#include "compression.h"
 
 
 
+#define RUNS 1000
+#define WARMUP_RUNS 100
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -27,7 +27,7 @@ void runExperimentsForRates(int x, int y, int z, bool useWave, bool visualizeDat
 
 void runTimingExperimentFFTOnly();
 
-void runTimingExperiment(int x);
+void runTimingExperiment(int x, int y, int z);
 
 void start();
 
