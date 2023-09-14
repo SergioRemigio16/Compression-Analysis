@@ -11,6 +11,13 @@ include_directories(include)
 include_directories(/usr/include)  # For FFTW3 header files (optional, if FFTW headers are not found)
 link_directories(/usr/lib/x86_64-linux-gnu)  # For FFTW3 library files
 
+# Include ZFP directories
+include_directories(/home/laptop/zfp/build)  # For ZFP header files 
+link_directories(/home/laptop/zfp/build/lib)  # For ZFP library files
+
+# Set custom CMAKE_PREFIX_PATH
+list(APPEND CMAKE_PREFIX_PATH "/home/laptop/zfp/build")
+
 # External libraries
 find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
@@ -34,7 +41,9 @@ target_link_libraries(CompressionModules
 )
 
 # If FFTW3 include directories are needed, you can include them this way:
-target_include_directories(CompressionModules PRIVATE ${FFTW3_INCLUDE_DIRS})
+target_include_directories(CompressionModules PUBLIC ${FFTW3_INCLUDE_DIRS})
 
 # If FFTW3 compile options are needed, you can include them this way:
-target_compile_options(CompressionModules PRIVATE ${FFTW3_CFLAGS_OTHER})
+target_compile_options(CompressionModules PUBLIC ${FFTW3_CFLAGS_OTHER})
+
+

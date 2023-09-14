@@ -2,8 +2,42 @@
 #include "Utilities.h"
 #include "compression.h"
 
+/*
 int main() {
     start();
+    return 0;
+}
+*/
+
+int main() {
+    int x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
+    int n = x * y * z;
+    int k = 7; 
+
+    // Define original matrix
+    double* originalMatrix = Utilities::createMatrixWave(x, y, z, 1, 3.1415, 0, 1.0, 1.0, 7);
+    int originalMatrixBytes = x * y * z * sizeof(double);
+
+    // Compress the matrix
+    int compressedSize;
+    unsigned char* compressedMatrix = SVDAlgorithms::compressMatrix1dsq(originalMatrix, n, k, compressedSize);
+
+    // Decompress the matrix
+    double* decompressedMatrix = SVDAlgorithms::decompressMatrix1dsq(compressedMatrix, compressedSize);
+
+    // Printing comparison of original and decompressed data
+    Utilities::printComparison(originalMatrix, decompressedMatrix, x, y, z);
+
+    std::cout << "Original matrix size: " << originalMatrixBytes << " bytes" << std::endl;
+    std::cout << "Compressed matrix size: " << compressedSize << " bytes" << std::endl;
+    // Printing various types of error between original and decompressed data
+    Utilities::printError(originalMatrix, decompressedMatrix, x, y, z);
+
+    // Freeing the memory
+    delete[] originalMatrix;
+    delete[] compressedMatrix;
+    delete[] decompressedMatrix;
+
     return 0;
 }
 

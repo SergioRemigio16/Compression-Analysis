@@ -28,3 +28,7 @@ closer to the black holes are much closer together while points
 further from the black holes are more spaced out. There is 
 much less activity away from the black holes so data is expected 
 to be flat but still come from wave functions.
+
+## Installation Requirements 
+`sudo apt install cmake g++ libeigen3-dev libfftw3-dev pkg-config build-essential libopenmpi-dev`
+

@@ -199,6 +199,362 @@ namespace SVDAlgorithms {
         return 0;
     }
     */
+
+    unsigned char* compressMatrix1dsq(double*& originalMatrix, const int n, int k, int& buffer_size) {
+        int side_length = static_cast<int>(std::sqrt(n)) + 1;
+
+        // Validate k based on the dimensions of the reshaped matrix
+        int min_dimension = std::min(side_length, side_length);
+        if (k < 1 || k > min_dimension) {
+            k = 1;
+        }
+
+        // Create a 2D Eigen matrix and initialize with zeros
+        Eigen::MatrixXd dataMatrix = Eigen::MatrixXd::Zero(side_length, side_length);
+
+        // Fill in the 2D matrix with values from the original 1D array
+        for (int i = 0; i < side_length; ++i) {
+            for (int j = 0; j < side_length; ++j) {
+                int index1d = i * side_length + j;
+                if (index1d < n) {
+                    dataMatrix(i, j) = originalMatrix[index1d];
+                }
+            }
+        }
+
+        // Perform SVD
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd(dataMatrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+        // Now we will get the first k columns of U and V, and the first k singular values
+        Eigen::MatrixXd U = svd.matrixU().leftCols(k);
+        Eigen::MatrixXd V = svd.matrixV().leftCols(k);
+        Eigen::VectorXd S = svd.singularValues().head(k);
+
+        // Serialize the matrices and metadata into a byte stream
+        int U_rows = U.rows();
+        int U_cols = U.cols();
+        int V_rows = V.rows();
+        int V_cols = V.cols();
+        int S_length = S.size();
+
+        int U_size = U.size() * sizeof(double);
+        int V_size = V.size() * sizeof(double);
+        int S_size = S.size() * sizeof(double);
+        int header_size = 5 * sizeof(int); // side_length, U_rows, U_cols, V_rows, V_cols, S_length
+        buffer_size = header_size + U_size + V_size + S_size;
+
+        unsigned char* byteStream = new unsigned char[buffer_size];
+        unsigned char* ptr = byteStream;
+
+        // Serialize the metadata into the byte stream
+        memcpy(ptr, &n, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, &U_rows, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, &U_cols, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, &V_rows, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, &V_cols, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, &S_length, sizeof(int));
+        ptr += sizeof(int);
+
+        // Serialize the matrix and vector data
+        // For U
+        for (int i = 0; i < U_rows; ++i) {
+            for (int j = 0; j < U_cols; ++j) {
+                double value = U(i, j);
+                memcpy(ptr, &value, sizeof(double));
+                ptr += sizeof(double);
+            }
+        }
+
+        // For V
+        for (int i = 0; i < V_rows; ++i) {
+            for (int j = 0; j < V_cols; ++j) {
+                double value = V(i, j);
+                memcpy(ptr, &value, sizeof(double));
+                ptr += sizeof(double);
+            }
+        }
+
+        // For S
+        for (int i = 0; i < S_length; ++i) {
+            double value = S(i);
+            memcpy(ptr, &value, sizeof(double));
+            ptr += sizeof(double);
+        }
+
+        return byteStream;
+    }
+
+
+
+    double* decompressMatrix1dsq(unsigned char*& byteStream, int buffer_size) {
+
+        unsigned char* ptr = byteStream;
+
+        // Deserialize the metadata
+        int n;
+        int U_rows, U_cols, V_rows, V_cols, S_length;
+        
+        memcpy(&n, ptr, sizeof(int));
+        ptr += sizeof(int);
+        
+        memcpy(&U_rows, ptr, sizeof(int));
+        ptr += sizeof(int);
+        
+        memcpy(&U_cols, ptr, sizeof(int));
+        ptr += sizeof(int);
+        
+        memcpy(&V_rows, ptr, sizeof(int));
+        ptr += sizeof(int);
+        
+        memcpy(&V_cols, ptr, sizeof(int));
+        ptr += sizeof(int);
+        
+        memcpy(&S_length, ptr, sizeof(int));
+        ptr += sizeof(int);
+
+        // Deserialize the matrices 
+        Eigen::MatrixXd U(U_rows, U_cols);
+        for (int i = 0; i < U_rows; ++i) {
+            for (int j = 0; j < U_cols; ++j) {
+                double value;
+                memcpy(&value, ptr, sizeof(double));
+                U(i, j) = value;
+                ptr += sizeof(double);
+            }
+        }
+
+        // For V
+        Eigen::MatrixXd V(V_rows, V_cols);
+        for (int i = 0; i < V_rows; ++i) {
+            for (int j = 0; j < V_cols; ++j) {
+                double value;
+                memcpy(&value, ptr, sizeof(double));
+                V(i, j) = value;
+                ptr += sizeof(double);
+            }
+        }
+
+        // For S
+        Eigen::VectorXd S(S_length);
+        for (int i = 0; i < S_length; ++i) {
+            double value;
+            memcpy(&value, ptr, sizeof(double));
+            S(i) = value;
+            ptr += sizeof(double);
+        }
+
+        // Perform matrix multiplication to decompress the data
+        Eigen::MatrixXd decompressedMatrix = U * S.asDiagonal() * V.transpose();
+
+        // Initialize raw pointer for the decompressed data
+        double* decompressedData = new double[n];
+
+        int side_length = static_cast<int>(std::sqrt(n)) + 1;
+        // Reshape the decompressed matrix to a raw pointer
+        for (int i = 0; i < side_length; ++i) {
+            for (int j = 0; j < side_length; ++j) {
+                int index1d = i * side_length + j;
+                if (index1d < n) {
+                    decompressedData[index1d] = decompressedMatrix(i, j);
+                }
+            }
+        }
+
+        return decompressedData;
+    }
+
+	std::pair<int, int> findSquareLikeDimensions(int n) {
+		if (n < 2) {
+			return { 1, n };
+		}
+		for (int i = static_cast<int>(sqrt(n)); i >= 1; --i) {
+			if (n % i == 0) {
+				return { i, n / i };
+			}
+		}
+		return { 2, (n / 2) + 1 };  // if n is prime
+	}
+
+	unsigned char* compressMatrix1drec(double*& originalMatrix, const int n, int cmp_str, int& buffer_size) {
+		// Find 2D dimensions
+		std::pair<int, int> dimensions = findSquareLikeDimensions(n);
+		int rows = dimensions.first;
+		int cols = dimensions.second;
+
+		// Handle the case when n is prime
+		bool fill_zero = (rows * cols > n);
+
+		// Set k based on cmp_str
+		int k = std::min(rows, cols);
+		k = k - cmp_str;
+		if (k < 1)
+		{
+			k = 1;
+		}
+
+		// Reshape 1D to 2D matrix
+		Eigen::MatrixXd dataMatrix(rows, cols);
+		for (int i = 0; i < rows; ++i) {
+			for (int j = 0; j < cols; ++j) {
+				int idx = i * cols + j;
+				dataMatrix(i, j) = (idx < n) ? originalMatrix[idx] : 0;
+			}
+		}
+
+		// Perform SVD
+		Eigen::JacobiSVD<Eigen::MatrixXd> svd(dataMatrix, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+		// Now we will get the first k columns of U and V, and the first k singular values
+		Eigen::MatrixXd U = svd.matrixU().leftCols(k);
+		Eigen::MatrixXd V = svd.matrixV().leftCols(k);
+		Eigen::VectorXd S = svd.singularValues().head(k);
+
+
+		// Serialize the matrices and metadata into a byte stream
+		int U_rows = U.rows();
+		int U_cols = U.cols();
+		int V_rows = V.rows();
+		int V_cols = V.cols();
+		int S_length = S.size();
+
+		int U_size = U.size() * sizeof(double);
+		int V_size = V.size() * sizeof(double);
+		int S_size = S.size() * sizeof(double);
+		int header_size = 7 * sizeof(int) + sizeof(bool); // rows, cols, U_rows, U_cols, V_rows, V_cols, S_size, fill_zero
+		buffer_size = header_size + U_size + V_size + S_size;
+
+		unsigned char* byteStream = new unsigned char[buffer_size];
+		unsigned char* ptr = byteStream;
+
+		// Serialize the metadata into the byte stream
+		memcpy(ptr, &rows, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &cols, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &U_rows, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &U_cols, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &V_rows, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &V_cols, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &S_length, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &fill_zero, sizeof(bool));
+		ptr += sizeof(bool);
+
+		// Now serialize the matrix and vector data
+		// For U
+		// Ret
+		for (int i = 0; i < U_rows; ++i)
+		{
+			for (int j = 0; j < U_cols; ++j)
+			{
+				double value = U(i, j);
+				memcpy(ptr, &value, sizeof(double));
+				ptr += sizeof(double);
+			}
+		}
+		// For V
+		for (int i = 0; i < V_rows; ++i)
+		{
+			for (int j = 0; j < V_cols; ++j)
+			{
+				double value = V(i, j);
+				memcpy(ptr, &value, sizeof(double));
+				ptr += sizeof(double);
+			}
+		}
+
+		// For S
+		for (int i = 0; i < S_length; ++i)
+		{
+			double value = S(i);
+			memcpy(ptr, &value, sizeof(double));
+			ptr += sizeof(double);
+		}
+		return byteStream;
+	}
+
+	double* decompressMatrix1drec(unsigned char*& byteStream, int buffer_size) {
+		unsigned char* ptr = byteStream;
+
+		// Deserialize the metadata
+		int rows, cols;
+		memcpy(&rows, ptr, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(&cols, ptr, sizeof(int));
+		ptr += sizeof(int);
+		int U_rows, U_cols, V_rows, V_cols, S_length;
+		memcpy(&U_rows, ptr, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(&U_cols, ptr, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(&V_rows, ptr, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(&V_cols, ptr, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(&S_length, ptr, sizeof(int));
+		ptr += sizeof(int);
+		bool fill_zero;
+		memcpy(&fill_zero, ptr, sizeof(bool));
+		ptr += sizeof(bool);
+
+
+		// Deserialize the matrices 
+		Eigen::MatrixXd U(U_rows, U_cols);
+		for (int i = 0; i < U_rows; ++i) {
+			for (int j = 0; j < U_cols; ++j) {
+				double value;
+				memcpy(&value, ptr, sizeof(double));
+				U(i, j) = value;
+				ptr += sizeof(double);
+			}
+		}
+		// For V
+		Eigen::MatrixXd V(V_rows, V_cols);
+		for (int i = 0; i < V_rows; ++i) {
+			for (int j = 0; j < V_cols; ++j) {
+				double value;
+				memcpy(&value, ptr, sizeof(double));
+				V(i, j) = value;
+				ptr += sizeof(double);
+			}
+		}
+
+		// For S
+		Eigen::VectorXd S(S_length);
+		for (int i = 0; i < S_length; ++i) {
+			double value;
+			memcpy(&value, ptr, sizeof(double));
+			S(i) = value;
+			ptr += sizeof(double);
+		}
+
+		// Perform matrix multiplication to decompress the data
+		Eigen::MatrixXd decompressedMatrix = U * S.asDiagonal() * V.transpose();
+
+		int n = rows * cols - static_cast<int>(fill_zero);
+		double* decompressedData = new double[n];
+
+		// Fill the decompressedData
+		for (int i = 0; i < rows; ++i) {
+			for (int j = 0; j < cols; ++j) {
+				int idx = i * cols + j;
+				if (idx < n) {
+					decompressedData[idx] = decompressedMatrix(i, j);
+				}
+			}
+		}
+		return decompressedData;
+
+	}
 }
 
 
@@ -684,7 +1040,6 @@ namespace FFTAlgorithms {
 }
 
 
-
 namespace ZFPAlgorithms {
 
     unsigned char* compressMatrix(double* originalData, int x, int y, int z, double rate, int& size) {
@@ -727,6 +1082,42 @@ namespace ZFPAlgorithms {
         return buffer;
     }
 
+    unsigned char* compressMatrix1D(double* originalData, int n, double rate, int& size) {
+        // Initialize a 3D array with original data, using ZFP's special 'field' structure. 
+        // The field has the type of double and the dimensions are given by x, y, and z.
+        zfp_field* field = zfp_field_1d(originalData, zfp_type_double, n);
+        // Open a new ZFP stream. A ZFP stream is responsible for compressing and decompressing data.
+        zfp_stream* zfp = zfp_stream_open(NULL);
+        // Set the compression rate for the ZFP stream. The type of the data is double, the dimensionality is 3, and '0' indicates we're not using a user-specified precision.
+        zfp_stream_set_rate(zfp, rate, zfp_type_double, 1, 0);
+
+        // Determine the maximum buffer size necessary for this ZFP stream given the input field.
+        int bufsize = zfp_stream_maximum_size(zfp, field);
+        size = bufsize + 1 * sizeof(int) + sizeof(double); // metadata x,y,z,rate
+        // Create a buffer with enough capacity to store the compressed data.
+        unsigned char* buffer = new unsigned char[size];
+        unsigned char* ptr = buffer;
+        memcpy(ptr, &n, sizeof(int));
+        ptr += sizeof(int);
+        memcpy(ptr, &rate, sizeof(double));
+        ptr += sizeof(double);
+        // Create a bitstream from the buffer to store compressed data.
+        bitstream* stream = stream_open(ptr, bufsize);
+        // Associate the bitstream with the ZFP stream, so compressed data will go into our buffer.
+        zfp_stream_set_bit_stream(zfp, stream);
+        // Compress the data. The results will be stored in the buffer we've created.
+        zfp_compress(zfp, field);
+
+        // Close the bitstream. All compressed data should now reside in our buffer.
+        stream_close(stream);
+        // Close the ZFP stream since we're done with compression.
+        zfp_stream_close(zfp);
+        // Release the memory allocated for the field since we're done with it.
+        zfp_field_free(field);
+
+        return buffer;
+    }
+
 
     double* decompressMatrix(unsigned char* buffer, int bufferSize) {
         // Deserialize metadata
@@ -749,6 +1140,30 @@ namespace ZFPAlgorithms {
         zfp_stream_set_bit_stream(zfp, stream);
         double* decompressedData = new double[x * y * z];
         zfp_field* dec_field = zfp_field_3d(decompressedData, zfp_type_double, x, y, z);
+        zfp_decompress(zfp, dec_field);
+        zfp_field_free(dec_field);
+        stream_close(stream);
+        zfp_stream_close(zfp);
+        return decompressedData;
+    }
+
+    double* decompressMatrix1D(unsigned char* buffer, int bufferSize) {
+        // Deserialize metadata
+        int n;
+        memcpy(&n, buffer, sizeof(int));
+        buffer += sizeof(int);
+        double rate;
+        memcpy(&rate, buffer, sizeof(double));
+        buffer += sizeof(double);
+
+        zfp_stream* zfp = zfp_stream_open(NULL);
+
+        // Set the decompression rate instead of accuracy
+        zfp_stream_set_rate(zfp, rate, zfp_type_double, 1, 0);
+        bitstream* stream = stream_open(buffer, bufferSize - 1 * sizeof(int) - sizeof(double));
+        zfp_stream_set_bit_stream(zfp, stream);
+        double* decompressedData = new double[n];
+        zfp_field* dec_field = zfp_field_1d(decompressedData, zfp_type_double, n);
         zfp_decompress(zfp, dec_field);
         zfp_field_free(dec_field);
         stream_close(stream);
