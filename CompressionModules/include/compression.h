@@ -137,6 +137,11 @@ namespace FFTAlgorithms {
     bool compareMagnitude(const MagnitudeIndexPair& a, const MagnitudeIndexPair& b);
 
     /**
+     * @brief Compresses a 3D matrix using Fast Fourier Transform (FFT).
+     *
+     * This function performs FFT on a given 3D matrix and then compresses the result based on a provided compression ratio.
+     * The compressed data and a bitmask indicating which components are non-zero are stored in a single byte stream.
+     * 
      * To compress the data choose compressionRatio to be anywhere from 0.0 through 1.0.
      * In our testing, we found the FFT compression algorithm to be highly inconsitent 
      * for all values. The best overall values were achieved when compressionRatio 
@@ -144,10 +149,22 @@ namespace FFTAlgorithms {
      * In a 3x7x7 matrix, compressionRatio above 0.45 offers no compression and makes the 
      * compressed data larger than the original data.
      * 
-     * @param compressionRatio Valid values 0.0 through 1.0.
-    */
+     * @param originalMatrix Pointer to the original 3D matrix of doubles to be compressed.
+     * @param x The size of the matrix along the x-axis.
+     * @param y The size of the matrix along the y-axis.
+     * @param z The size of the matrix along the z-axis.
+     * @param compressionRatio Ratio of frequency components to retain (range from 0 to 1).
+     *        If given a value greater than 1, it is set to 1.
+     * @param[out] size Output parameter indicating the size of the compressed data.
+     *
+     * @return A pointer to the byte stream containing the compressed data.
+     */
     unsigned char* compressMatrix(double* originalMatrix, int x, int y, int z, double compressionRatio, int& size);
     double* decompressMatrix(unsigned char* buffer, int bufferSize);
+
+    unsigned char* compressMatrix1D(double* originalMatrix, int n, double compressionRatio, int& size);
+    double* decompressMatrix1D(unsigned char* buffer, int bufferSize);
+
 }
 
 #endif // FFT_ALGORITHMS_H

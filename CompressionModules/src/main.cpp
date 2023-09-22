@@ -2,6 +2,41 @@
 #include "Utilities.h"
 #include "compression.h"
 
+
+int main() {
+    int x = 3;
+    int y = 7;
+    int z = 7;
+    int n = x * y * z;
+    //double* originalMatrix = Utilities::readBinaryFile("../../data/nlsm_uncompressed_dumped_SEND_from_0_to_1.bin", n);
+    double* originalMatrix = Utilities::createMatrixWave(x, y, z, 2.14, 0, 3.14, 3.14, 3.14);
+    double rate = .09; 
+
+    // Define original matrix
+    int originalMatrixBytes = n * sizeof(double);
+
+    // Compress the matrix
+    int compressedSize;
+    unsigned char* compressedMatrix = FFTAlgorithms::compressMatrix1D(originalMatrix, n, rate, compressedSize);
+
+    // Decompress the matrix
+    double* decompressedMatrix = FFTAlgorithms::decompressMatrix1D(compressedMatrix, compressedSize);
+
+    // Printing comparison of original and decompressed data
+    Utilities::printComparison(originalMatrix, decompressedMatrix, n, originalMatrixBytes, compressedSize);
+    // Printing various types of error between original and decompressed data
+    Utilities::printError(originalMatrix, decompressedMatrix, n);
+
+    // Freeing the memory
+    delete[] originalMatrix;
+    delete[] compressedMatrix;
+    delete[] decompressedMatrix;
+
+    return 0;
+
+    return 0;
+}
+
 /*
 int main() {
     start();
@@ -9,13 +44,15 @@ int main() {
 }
 */
 
+
+/*
 int main() {
     int x = 3, y = 7, z = 7; // Dimensions of matrix. Modify as needed.
     int n = x * y * z;
     int k = 7; 
 
     // Define original matrix
-    double* originalMatrix = Utilities::createMatrixWave(x, y, z, 1, 3.1415, 0, 1.0, 1.0, 7);
+    double* originalMatrix = Utilities::createMatrixWave(x, y, z, 2.14, 0, 3.14, 3.14, 3.14);
     int originalMatrixBytes = x * y * z * sizeof(double);
 
     // Compress the matrix
@@ -40,11 +77,12 @@ int main() {
 
     return 0;
 }
+*/
 
 /*
 int main() {
 	int x = 3, y = 7, z = 7;
-	double* originalMatrix = Utilities::createMatrixWave(x, y, z, 0.1, 0.1, 0.1, 1.0, 1.0, 1);
+    double* originalMatrix = Utilities::createMatrixWave(x, y, z, 2.14, 0, 3.14, 3.14, 3.14);
 	// The first degree polynomials for each dimension
 	int N = 3;
 	int Q = 5;
@@ -69,44 +107,3 @@ int main() {
 
 }
 */
-
-/*
-
-int main() {
-    int x = 3, y = 7, z = 30; // Dimensions of matrix. Modify as needed.
-    //int k = std::min(y, z) / 2;
-    int k = 21;
-
-    // Define original matrix
-    double* originalMatrix = Utilities::createMatrixWave(x, y, z, 1, 3.1415, 0, 1.0, 1.0, 7);
-    int originalMatrixBytes = x * y * z * sizeof(double);
-
-    // Compress the matrix
-    int compressedSize;
-    unsigned char* compressedMatrix = SVDAlgorithms::compressMatrix(originalMatrix, x, y, z, k, compressedSize);
-
-    // Decompress the matrix
-    double* decompressedMatrix = SVDAlgorithms::decompressMatrix(compressedMatrix, compressedSize);
-
-    // Printing comparison of original and decompressed data
-    Utilities::printComparison(originalMatrix, decompressedMatrix, x, y, z);
-
-    std::cout << "Original matrix size: " << originalMatrixBytes << " bytes" << std::endl;
-    std::cout << "Compressed matrix size: " << compressedSize << " bytes" << std::endl;
-    // Printing various types of error between original and decompressed data
-    Utilities::printError(originalMatrix, decompressedMatrix, x, y, z);
-
-    // Freeing the memory
-    delete[] originalMatrix;
-    delete[] compressedMatrix;
-    delete[] decompressedMatrix;
-
-    return 0;
-}
-
-/*
-int main() {
-	//start();
-}
-*/
-

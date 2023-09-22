@@ -4,7 +4,7 @@
 // with each (i, j, k) triplet corresponding to a unique index in the 1D array.
 #define IDX(i, j, k) ((i)*y*z + (j)*z + (k))  // 3D to 1D indexing
 
-double* Utilities::createMatrixWave(int x, int y, int z, double frequency, double amplitude, double phase, double fx, double fy, double fz) {
+double* Utilities::createMatrixWave(int x, int y, int z, double amplitude, double phase, double fx, double fy, double fz) {
     // Allocate a 1D array to hold the wave data. The size of the array is the product of the dimensions x, y, and z.
     double* matrix = new double[x * y * z];
 
@@ -15,9 +15,9 @@ double* Utilities::createMatrixWave(int x, int y, int z, double frequency, doubl
             // Loop over each index in the z dimension.
             for (int k = 0; k < z; k++) {
                 // Calculate the value of the wave at the point (i, j, k). The value is determined by a sine function, which 
-                // is influenced by the frequency, amplitude, and phase input parameters, as well as the propagation factors 
+                // is influenced by the amplitude, and phase input parameters, as well as the propagation factors 
                 // fx, fy, and fz for each dimension. The result is a wave that can propagate differently along the x, y, and z dimensions.
-                double waveValue = amplitude * sin(frequency * (fx * i + fy * j + fz * k) + phase);
+                double waveValue = amplitude * sin((fx * i + fy * j + fz * k) + phase);
 
                 // Store the wave value in the 1D array. The 3D index (i, j, k) is converted to a 1D index using the IDX macro.
                 matrix[IDX(i, j, k)] = waveValue;
@@ -28,9 +28,6 @@ double* Utilities::createMatrixWave(int x, int y, int z, double frequency, doubl
     // Return the 1D array containing the wave data.
     return matrix;
 }
-
-
-
 
 void Utilities::writeWaveToCSV(double* matrix, int x, int y, int z, const std::string& filename) {
     std::ofstream file;
@@ -94,7 +91,7 @@ size_t Utilities::calculateOriginalDataBytes(size_t size) {
 }
 
 
-void Utilities::printComparison(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z) {
+void Utilities::printComparison(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z, int originalMatrixBytes, int compressedSize) {
     double epsilon = 1e-9;
     std::cout << std::fixed << std::setprecision(15);  // for consistent number of decimal places
     int width = 20;  // 6 decimal digits, 1 dot, 1 sign and up to 4 whole part digits
@@ -123,6 +120,34 @@ void Utilities::printComparison(const double* originalMatrix, const double* deco
         std::cout << "\n";
     }
 }
+
+void Utilities::printComparison(const double* originalArray, const double* decompressedArray, int n, int originalMatrixBytes, int compressedSize) {
+    double epsilon = 1e-9;
+    std::cout << std::fixed << std::setprecision(15);  // for consistent number of decimal places
+    int width = 20;  // 6 decimal digits, 1 dot, 1 sign and up to 4 whole part digits
+
+    for (int i = 0; i < n; i++) {
+        double original = originalArray[i];
+        double decompressed = decompressedArray[i];
+
+        std::cout << "[";
+        std::cout << std::setw(width) << original << ", ";
+        std::cout << std::setw(width) << decompressed;
+
+        // Check if the numbers differ significantly
+        if (std::abs(original - decompressed) > epsilon) {
+            std::cout << "*]\n";
+        }
+        else {
+            std::cout << "]\n";
+        }
+    }
+    std::cout << "Original matrix size: " << originalMatrixBytes << " bytes" << std::endl;
+    std::cout << "Compressed matrix size: " << compressedSize << " bytes" << std::endl;
+    std::cout << std::fixed << std::setprecision(2) << "Compression Ratio: " << (double)originalMatrixBytes/(double)compressedSize << std::endl;
+    std::cout << std::fixed << std::setprecision(15);
+}
+
 
 void Utilities::printError(const double* originalMatrix, const double* decompressedMatrix, int x, int y, int z) {
 	// Computing and printing Mean Squared Error, Mean Absolute Error,
@@ -160,4 +185,77 @@ void Utilities::printError(const double* originalMatrix, const double* decompres
     double maxOriginalValue = *std::max_element(originalMatrix, originalMatrix + (x * y * z));
     double psnr = 20 * log10(maxOriginalValue / rmse);
     std::cout << "Peak Signal to Noise Ratio (in dB): " << psnr << "\n";
+}
+
+void Utilities::printError(const double* originalArray, const double* decompressedArray, int n) {
+    // Computing and printing Mean Squared Error
+    double mse = 0;
+    for (size_t i = 0; i < n; ++i) {
+        double error = originalArray[i] - decompressedArray[i];
+        mse += error * error;
+    }
+    mse /= n;
+
+    std::cout << "Mean Squared Error: " << mse << "\n";
+
+    // Compute and print Mean Absolute Error
+    double mae = 0;
+    for (size_t i = 0; i < n; ++i) {
+        double error = std::abs(originalArray[i] - decompressedArray[i]);
+        mae += error;
+    }
+    mae /= n;
+    std::cout << "Mean Absolute Error: " << mae << "\n";
+
+    // Compute and print Maximum Absolute Error
+    double maxError = 0;
+    for (size_t i = 0; i < n; ++i) {
+        double error = std::abs(originalArray[i] - decompressedArray[i]);
+        maxError = std::max(maxError, error);
+    }
+    std::cout << "Max Absolute Error: " << maxError << "\n";
+
+    // Compute and print Root Mean Squared Error
+    double rmse = std::sqrt(mse);
+    std::cout << "Root Mean Squared Error: " << rmse << "\n";
+
+    // Compute and print Peak Signal to Noise Ratio (PSNR)
+    double maxOriginalValue = *std::max_element(originalArray, originalArray + n);
+    double psnr = 20 * std::log10(maxOriginalValue / rmse);
+    std::cout << "Peak Signal to Noise Ratio (in dB): " << psnr << "\n";
+}
+
+
+
+double* Utilities::readBinaryFile(const std::string& fileName, int& size) {
+    std::ifstream inputFile(fileName, std::ios::binary);
+    if (!inputFile) {
+        std::cerr << "Error: Could not open file " << fileName << std::endl;
+        return nullptr;
+    }
+
+    // Read the size of the array from the first 4 bytes
+    inputFile.read(reinterpret_cast<char*>(&size), sizeof(int));
+    
+    if (!inputFile) {
+        std::cerr << "Error: Could not read the size of the array from the file." << std::endl;
+        return nullptr;
+    }
+
+    // Allocate memory for the double array
+    double* array = new double[size];
+    
+    // Read the double values
+    inputFile.read(reinterpret_cast<char*>(array), size * sizeof(double));
+    
+    if (!inputFile) {
+        std::cerr << "Error: Could not read the double values from the file." << std::endl;
+        delete[] array;
+        return nullptr;
+    }
+
+    // Close the input file
+    inputFile.close();
+
+    return array;
 }

@@ -9,7 +9,6 @@
 
 // Parameters for wave matrix creation
 struct WaveParams {
-	double frequency;
 	double amplitude;
 	double phase;
 	double fx;
@@ -57,7 +56,7 @@ int runExperiment(int x, int y, int z, bool useWave, const WaveParams& waveParam
 
 	for (int i = 0; i < RUNS + WARMUP_RUNS; i++) {
 		double* originalMatrix =
-			Utilities::createMatrixWave(x, y, z, waveParams.frequency, waveParams.amplitude, waveParams.phase, waveParams.fx, waveParams.fy, waveParams.fz);
+			Utilities::createMatrixWave(x, y, z, waveParams.amplitude, waveParams.phase, waveParams.fx, waveParams.fy, waveParams.fz);
 
 		unsigned char* compressedMatrix = nullptr;
 		double* decompressedMatrix = nullptr;
@@ -172,7 +171,6 @@ int runExperiment(int x, int y, int z, bool useWave, const WaveParams& waveParam
 	<< x << ','
 	<< y << ','
 	<< z << ','
-	<< waveParams.frequency << ','
 	<< waveParams.amplitude << ','
 	<< waveParams.phase << ','
 	<< waveParams.fx << ','
@@ -209,7 +207,6 @@ int runExperiment(int x, int y, int z, bool useWave, const WaveParams& waveParam
 		<< std::setw(10) << "Matrix size:"
 		<< std::setw(5) << (std::to_string(x) + "x" + std::to_string(y) + "x" + std::to_string(z) + ",")
 		<< std::setw(5) << ("Name: " + algorithmName)
-		<< std::setw(20) << (", Frequency: " + std::to_string(waveParams.frequency))
 		<< std::setw(20) << (", Amplitude: " + std::to_string(waveParams.amplitude))
 		<< std::setw(10) << (", Phase: " + std::to_string(waveParams.phase))
 		<< std::setw(15) << (", Fx: " + std::to_string(waveParams.fx))
@@ -313,7 +310,6 @@ void runTimingExperiment(int x, int y, int z) {
 		<< "X" << ','
 		<< "Y" << ','
 		<< "Z" << ','
-		<< "Frequency" << ','
 		<< "Amplitude" << ','
 		<< "Phase" << ','
 		<< "Fx" << ','
@@ -335,24 +331,21 @@ void runTimingExperiment(int x, int y, int z) {
 		<< "Max Error Decompressed Value"
 		<< std::endl;
 
+	for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
+		std::cout << x << ": " << amplitude << std::endl;
+		for (double phase = 0.0; phase <= M_PI; phase += M_PI / 2.0) {
+			for (double fx = 0.1; fx <= 1.0; fx += 0.3) {
+				for (double fy = 0.1; fy <= 1.0; fy += 0.3) {
+					for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
+						WaveParams waveParams = {amplitude, phase, fx, fy, fz };
 
-	for (double frequency = 1.0; frequency <= 2.0; frequency += 0.1) {
-		std::cout << x << ": " << frequency << std::endl;
-		for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
-			for (double phase = 0.0; phase <= M_PI; phase += M_PI / 2.0) {
-				for (double fx = 0.1; fx <= 1.0; fx += 0.3) {
-					for (double fy = 0.1; fy <= 1.0; fy += 0.3) {
-						for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
-							WaveParams waveParams = { frequency, amplitude, phase, fx, fy, fz };
-
-							for (int algorithm = 0; algorithm < 3; ++algorithm) {
-								runExperimentsForRatesAndKs(x, y, z, true, waveParams,
-									1, 64, //minRate, maxRate
-									1, std:: min(x * y, z), //minK, maxK
-									1, x, 1, y, 1, z,// minN, maxN, minQ, maxQ, minS, maxS
-									0, 0, 0, //FFT 
-									algorithm, csv);
-							}
+						for (int algorithm = 0; algorithm < 3; ++algorithm) {
+							runExperimentsForRatesAndKs(x, y, z, true, waveParams,
+								1, 64, //minRate, maxRate
+								1, std:: min(x * y, z), //minK, maxK
+								1, x, 1, y, 1, z,// minN, maxN, minQ, maxQ, minS, maxS
+								0, 0, 0, //FFT 
+								algorithm, csv);
 						}
 					}
 				}
@@ -370,7 +363,6 @@ void runTimingExperimentFFTOnly() {
 		<< "X" << ','
 		<< "Y" << ','
 		<< "Z" << ','
-		<< "Frequency" << ','
 		<< "Amplitude" << ','
 		<< "Phase" << ','
 		<< "Fx" << ','
@@ -393,19 +385,17 @@ void runTimingExperimentFFTOnly() {
 		<< std::endl;
 	for (int x = 3; x <= 3; x++) {
 		std::cout << "FFT: " << x << std::endl;
-		for (double frequency = 1.0; frequency <= 2.0; frequency += 0.1) {
-			for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
-				for (double phase = 0.0; phase <= M_PI; phase += M_PI / 2.0) {
-					for (double fx = 0.1; fx <= 1.0; fx += 0.3) {
-						for (double fy = 0.1; fy <= 1.0; fy += 0.3) {
-							for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
-								WaveParams waveParams = { frequency, amplitude, phase, fx, fy, fz };
+		for (double amplitude = 0.1; amplitude <= 2.0; amplitude += 0.1) {
+			for (double phase = 0.0; phase <= M_PI; phase += M_PI / 2.0) {
+				for (double fx = 0.1; fx <= 1.0; fx += 0.3) {
+					for (double fy = 0.1; fy <= 1.0; fy += 0.3) {
+						for (double fz = 0.1; fz <= 1.0; fz += 0.3) {
+							WaveParams waveParams = {amplitude, phase, fx, fy, fz };
 
-								for (int algorithm = 3; algorithm < 4; ++algorithm) { // Only the FFT algorithm
-									runExperimentsForRatesAndKs(x, 7, 7, true, waveParams, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-										0.1, 1.0, 0.05, // minCompressionRatio, maxCompressionRatio, compressionRatioStep
-										algorithm, csv);
-								}
+							for (int algorithm = 3; algorithm < 4; ++algorithm) { // Only the FFT algorithm
+								runExperimentsForRatesAndKs(x, 7, 7, true, waveParams, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+									0.1, 1.0, 0.05, // minCompressionRatio, maxCompressionRatio, compressionRatioStep
+									algorithm, csv);
 							}
 						}
 					}
