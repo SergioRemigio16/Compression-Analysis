@@ -29,6 +29,17 @@ double* Utilities::createMatrixWave(int x, int y, int z, double amplitude, doubl
     return matrix;
 }
 
+double* Utilities::createWave1D(int n, double amplitude, double phase, double fx) {
+    double* array = new double[n];
+    double next = 0.0001;
+    for (int i = 0; i < n; i++) {
+        double waveValue = amplitude * sin((fx * next * i) + phase);
+        array[i] = waveValue;
+    }
+    return array;
+}
+
+
 void Utilities::writeWaveToCSV(double* matrix, int x, int y, int z, const std::string& filename) {
     std::ofstream file;
     file.open(filename);

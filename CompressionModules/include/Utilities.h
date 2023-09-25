@@ -28,6 +28,7 @@ namespace Utilities {
 	 *         The size of the array is x * y * z. The caller of the function is responsible for deallocating this memory.
 	 */
 	double* createMatrixWave(int x, int y, int z, double amplitude, double phase, double fx, double fy, double fz);
+	double* createWave1D(int n, double amplitude, double phase, double fx);
 	void writeWaveToCSV(double* matrix, int x, int y, int z, const std::string& filename);
 	double* createMatrixRandom(int x, int y, int z, double minVal, double maxVal);
 	double measureTimingOverhead();

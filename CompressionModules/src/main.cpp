@@ -4,20 +4,20 @@
 
 
 int main() {
-    int x = 3;
-    int y = 7;
-    int z = 7;
+    int x = 30;
+    int y = 70;
+    int z = 70;
     int n = x * y * z;
     //double* originalMatrix = Utilities::readBinaryFile("../../data/nlsm_uncompressed_dumped_SEND_from_0_to_1.bin", n);
-    double* originalMatrix = Utilities::createMatrixWave(x, y, z, 2.14, 0, 3.14, 3.14, 3.14);
-    double rate = .09; 
+    double* originalMatrix = Utilities::createWave1D(n, 1, 0, 1);
+    double threshold = 0.94;
 
     // Define original matrix
     int originalMatrixBytes = n * sizeof(double);
 
     // Compress the matrix
     int compressedSize;
-    unsigned char* compressedMatrix = FFTAlgorithms::compressMatrix1D(originalMatrix, n, rate, compressedSize);
+    unsigned char* compressedMatrix = FFTAlgorithms::compressMatrix1D(originalMatrix, n, threshold, compressedSize);
 
     // Decompress the matrix
     double* decompressedMatrix = FFTAlgorithms::decompressMatrix1D(compressedMatrix, compressedSize);
