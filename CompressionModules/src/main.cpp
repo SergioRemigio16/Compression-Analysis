@@ -37,7 +37,6 @@ bool saveReconstructedTree(cv::Mat& image, int n, double* decompressedMatrix, co
     return true;
 }
 
-
 int main() {
     int x = 30;
     int y = 70;
@@ -54,9 +53,9 @@ int main() {
         return 1;
     }
     
-    double* originalMatrix = convertImageToDoubleArray(image, n);
+    //double* originalMatrix = convertImageToDoubleArray(image, n);
 
-    //double* originalMatrix = Utilities::readBinaryFile(location, n);
+    double* originalMatrix = Utilities::readBinaryFile(location, n);
     //double* originalMatrix = Utilities::createWave1D(n, 1, 0, 1);
     double threshold = 50000;
 
@@ -65,10 +64,10 @@ int main() {
 
     // Compress the matrix
     int compressedSize;
-    unsigned char* compressedMatrix = FFTAlgorithms::compressMatrix1D(originalMatrix, n, threshold, compressedSize);
+    unsigned char* compressedMatrix = ChebyshevAlgorithms::compressMatrix1D(originalMatrix, n, 5, compressedSize);
 
     // Decompress the matrix
-    double* decompressedMatrix = FFTAlgorithms::decompressMatrix1D(compressedMatrix, compressedSize);
+    double* decompressedMatrix = ChebyshevAlgorithms::decompressMatrix1D(compressedMatrix, compressedSize);
 
     // Printing comparison of original and decompressed data
     // Utilities::printComparison(originalMatrix, decompressedMatrix, n, originalMatrixBytes, compressedSize);

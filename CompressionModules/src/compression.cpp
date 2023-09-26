@@ -712,6 +712,129 @@ namespace ChebyshevAlgorithms {
         return full_kron_product_truncated;
     }
 
+    unsigned char* compressMatrix1D(double*& originalMatrix, int n, int N, int& bufferSize) {
+        // Normalize the data inside originalMatrix
+        double minVal = *std::min_element(originalMatrix, originalMatrix + n);
+        double maxVal = *std::max_element(originalMatrix, originalMatrix + n);
+        double range = maxVal - minVal;
+
+		// Create normalizedMatrix as Eigen::VectorXd
+		Eigen::VectorXd normalizedMatrix(n);
+
+		// Iterate through the 1D array to normalize its elements
+		for (int i = 0; i < n; ++i) {
+			normalizedMatrix(i) = ((originalMatrix[i] - minVal) / range) * 2.0 - 1.0;
+		}
+
+        // Calculate the all the polynomials needed. 
+        Eigen::MatrixXd A(n, N);
+
+        // Populate A using Chebyshev polynomials
+        for (int i = 0; i < n; ++i) {
+            double normalized_x = static_cast<double>(i) / (n - 1);
+            for (int j = 0; j < N; ++j) {
+                A(i, j) = ChebyshevAlgorithms::chebyshevT(j, normalized_x);
+            }
+        }
+
+		// Calculate coefficients using Eigen's least squares solver
+		Eigen::VectorXd coefficients = A.colPivHouseholderQr().solve(normalizedMatrix);
+
+		// Calculate buffer size: x + N + minVal + maxVal + coefficients
+		bufferSize = (2 * sizeof(int)) + (2 * sizeof(double)) + (N * sizeof(double));
+
+		unsigned char* buffer = new unsigned char[bufferSize];
+		unsigned char* ptr = buffer;
+
+		// Add n and N to the buffer (assuming you have variables n and N)
+		memcpy(ptr, &n, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(ptr, &N, sizeof(int));
+		ptr += sizeof(int);
+
+		// Add minVal and maxVal to the buffer
+		memcpy(ptr, &minVal, sizeof(double));
+		ptr += sizeof(double);
+		memcpy(ptr, &maxVal, sizeof(double));
+		ptr += sizeof(double);
+
+		// Add coefficients to the buffer
+		for (int j = 0; j < coefficients.size(); ++j) {
+			double coef = coefficients(j);
+			memcpy(ptr, &coef, sizeof(double));
+			ptr += sizeof(double);
+		}
+
+        return buffer;
+    }
+
+    double* decompressMatrix1D(unsigned char*& buffer, int bufferSize) {
+		unsigned char* ptr = buffer;
+		int n, N;
+		double minVal, maxVal;
+
+		// Extract n and N
+		memcpy(&n, ptr, sizeof(int));
+		ptr += sizeof(int);
+		memcpy(&N, ptr, sizeof(int));
+		ptr += sizeof(int);
+
+		// Extract minVal and maxVal
+		memcpy(&minVal, ptr, sizeof(double));
+		ptr += sizeof(double);
+		memcpy(&maxVal, ptr, sizeof(double));
+		ptr += sizeof(double);
+
+		// Calculate the number of coefficients
+		int numCoefficients = (bufferSize - (2 * sizeof(int) + 2 * sizeof(double))) / sizeof(double);
+
+		// Create storage for the coefficients
+		Eigen::VectorXd coefficients(numCoefficients);
+
+		// Extract coefficients
+		for (int j = 0; j < numCoefficients; ++j) {
+			double coef;
+			memcpy(&coef, ptr, sizeof(double));
+			coefficients(j) = coef;
+			ptr += sizeof(double);
+		}
+
+		// Calculate the all the polynomials needed. 
+        Eigen::MatrixXd A(n, N);
+
+        // Populate A using Chebyshev polynomials
+        for (int i = 0; i < n; ++i) {
+            double normalized_x = static_cast<double>(i) / (n - 1);
+            for (int j = 0; j < N; ++j) {
+                A(i, j) = ChebyshevAlgorithms::chebyshevT(j, normalized_x);
+            }
+        }
+			 
+		// Reconstruct the original data using the Chebyshev coefficients and Chebyshev polynomials
+		Eigen::VectorXd reconstructedMatrix(n);
+		for (int i = 0; i < n; ++i) {
+			double sum = 0.0;
+			for (int j = 0; j < N; ++j) {
+				sum += coefficients(j) * A(i, j); // A(i, j) = T_j(x_i)
+			}
+			reconstructedMatrix(i) = sum;
+		}
+
+        // Convert Eigen::VectorXd back to double*
+        double* reconstructedArray = new double[n];
+        for (int i = 0; i < n; ++i) {
+            reconstructedArray[i] = reconstructedMatrix(i);
+        }
+
+        // Unnormalize the data
+        double range = maxVal - minVal;
+        for (int i = 0; i < n; ++i) {
+            reconstructedArray[i] = ((reconstructedArray[i] + 1.0) / 2.0) * range + minVal;
+        }
+
+        return reconstructedArray;
+    }
+
 
     unsigned char* compressMatrix(double*& originalMatrix, int x, int y, int z, int N, int Q, int S, int& bufferSize) {
         // Normalize the data inside originalMatrix
@@ -1109,7 +1232,7 @@ double* decompressMatrix1D(unsigned char* byteStream, int byteStreamSize) {
 }
 
 
-
+                                                                                                                                                                                                                                                                                                        
 
 
     /*

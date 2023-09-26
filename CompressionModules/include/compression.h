@@ -83,7 +83,9 @@ namespace SVDAlgorithms {
 #include <iostream>
 #include <utility>
 #include <unordered_map>
-
+#include <boost/math/special_functions/chebyshev.hpp>
+#include <boost/numeric/ublas/vector.hpp>
+#include <boost/numeric/ublas/matrix.hpp>
 
 namespace ChebyshevAlgorithms {
 
@@ -113,6 +115,21 @@ namespace ChebyshevAlgorithms {
 	unsigned char* compressMatrix(double*& originalMatrix, int x, int y, int z, int N, int Q, int S, int& bufferSize);
 	double* decompressMatrix(unsigned char*& buffer, int bufferSize);
 
+    /**
+    * Compress a 1D matrix using Chebyshev Approximation.
+    *
+    * Uses the spectral method to find the values of the coefficients that best
+    * fit the original data.
+    *
+    * @param originalMatrix: A pointer to the 1D matrix to be compressed. 
+    * @param n: The size of originalMatrix
+    * @param N: The number of Chebyshev polynomials to use to approximate the original data
+    * @param buffer_size: Output parameter that will hold the size of the resulting byte stream.
+    *
+    * @return: A pointer to a byte stream containing the compressed matrix and meta-information.
+    */
+    unsigned char* compressMatrix1D(double*& originalMatrix, int n, int N, int& bufferSize);
+    double* decompressMatrix1D(unsigned char*& buffer, int bufferSize);
 }
 #endif // _CHEBYSHEVALGORITHMS_H_
 

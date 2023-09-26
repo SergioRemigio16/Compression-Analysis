@@ -1,2 +1,2 @@
 sudo apt update
-sudo apt install cmake g++ libeigen3-dev libfftw3-dev pkg-config build-essential libopenmpi-dev
+sudo apt install cmake g++ libeigen3-dev libfftw3-dev pkg-config build-essential libopenmpi-dev libboost-math-dev
