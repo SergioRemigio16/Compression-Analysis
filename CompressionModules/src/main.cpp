@@ -2,6 +2,7 @@
 #include "Utilities.h"
 #include "compression.h"
 #include <opencv2/opencv.hpp>
+#include <blosc.h>
 
 
 double* convertImageToDoubleArray(const cv::Mat& image, int &size) {
@@ -37,6 +38,66 @@ bool saveReconstructedTree(cv::Mat& image, int n, double* decompressedMatrix, co
     return true;
 }
 
+int main() {
+    int n;
+    std::string location = "../../data/nlsm_uncompressed_dumped_SEND_from_0_to_1.bin";
+    double* originalMatrix = Utilities::readBinaryFile(location, n);
+    int originalMatrixBytes = n * sizeof(double);
+
+
+    // Compress the matrix
+    int compressedSize;
+    blosc_init();
+    const char* blosc_compressor = "zstd";
+
+    // Choose the compression level (1-9, where 9 is highest compression)
+    int compressionLevel = 9;// Choose the compression level (1-9, where 9 is highest compression)
+
+    int maxCompressedSize = originalMatrixBytes + BLOSC_MAX_OVERHEAD;
+
+
+    /*
+    compressedSize = blosc_compress(
+        compressionLevel, 
+        1, 
+        sizeof(double), 
+        originalMatrixBytes, 
+        originalMatrix, 
+        compressedMatrix, 
+        maxCompressedSize);
+
+    double* decompressedMatrix = new double[n];  
+
+    int decompressedSize = blosc_decompress(compressedMatrix, decompressedMatrix, originalMatrixBytes);
+    */
+
+
+    int bytestreamSize;
+    unsigned char* bytestream = BLOSCCompression::compressData(blosc_compressor ,compressionLevel, n, originalMatrix, bytestreamSize);
+    double* decompressedData = BLOSCCompression::decompressData(bytestream, bytestreamSize);
+
+
+    // Printing comparison of original and decompressed data
+    // Utilities::printComparison(originalMatrix, decompressedMatrix, n, originalMatrixBytes, compressedSize);
+
+    std::cout << "Original matrix size: " << originalMatrixBytes << " bytes" << std::endl;
+    std::cout << "Compressed matrix size: " << bytestreamSize << " bytes" << std::endl;
+    std::cout << std::fixed << std::setprecision(2) << "Compression Ratio: " << (double)originalMatrixBytes/(double)bytestreamSize << std::endl;
+    std::cout << std::fixed << std::setprecision(15);
+
+    // Printing various types of error between original and decompressed data
+    Utilities::printError(originalMatrix, decompressedData, n);
+
+
+    // Freeing the memory
+    delete[] originalMatrix;
+    delete[] decompressedData;
+
+    return 0;
+
+}
+
+/*
 int main() {
     int x = 30;
     int y = 70;
@@ -93,6 +154,7 @@ int main() {
 
     return 0;
 }
+*/
 
 /*
 int main() {
